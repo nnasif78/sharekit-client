@@ -1,0 +1,226 @@
+
+"use client";
+
+import { useEffect, useState } from "react";
+
+interface Equipment {
+  _id: string;
+  name: string;
+  description: string;
+  category: string;
+  location: string;
+  price: number;
+  rentalType: string;
+  availableQuantity: number;
+  condition: string;
+  image: string;
+  brand?: string;
+  model?: string;
+}
+
+export default function EquipmentPage() {
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [rentalType, setRentalType] = useState("");
+  const [sort, setSort] = useState("");
+
+  useEffect(() => {
+    const fetchEquipment = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const params = new URLSearchParams();
+
+        if (search.trim()) params.set("search", search.trim());
+        if (category) params.set("category", category);
+        if (rentalType) params.set("rentalType", rentalType);
+        if (sort) params.set("sort", sort);
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/equipment?${params.toString()}`
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.message || "Failed to fetch equipment"
+          );
+        }
+
+        setEquipment(result.data || []);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Something went wrong"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEquipment();
+  }, [search, category, rentalType, sort]);
+
+  return (
+    <main className="mx-auto min-h-screen max-w-7xl px-6 py-12">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">
+          All Equipment
+        </h1>
+
+        <p className="mt-2 text-gray-500">
+          Find the equipment you need to rent.
+        </p>
+      </div>
+
+      <div className="mb-8 grid gap-4 md:grid-cols-4">
+        <input
+          type="search"
+          placeholder="Search equipment..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="rounded-lg border p-3"
+        />
+
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="rounded-lg border p-3"
+        >
+          <option value="">All Categories</option>
+          <option value="Construction Equipment">
+            Construction Equipment
+          </option>
+          <option value="Photography Equipment">
+            Photography Equipment
+          </option>
+          <option value="Vehicles & Transportation">
+            Vehicles & Transportation
+          </option>
+          <option value="Agriculture Equipment">
+            Agriculture Equipment
+          </option>
+          <option value="Electronics">Electronics</option>
+          <option value="Event Equipment">Event Equipment</option>
+          <option value="Tools">Tools</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <select
+          value={rentalType}
+          onChange={(e) => setRentalType(e.target.value)}
+          className="rounded-lg border p-3"
+        >
+          <option value="">All Rental Types</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value)}
+          className="rounded-lg border p-3"
+        >
+          <option value="">Newest First</option>
+          <option value="price_asc">Price: Low to High</option>
+          <option value="price_desc">Price: High to Low</option>
+        </select>
+      </div>
+
+      {loading && (
+        <p className="py-10 text-center">
+          Loading equipment...
+        </p>
+      )}
+
+      {error && (
+        <p className="rounded-lg bg-red-50 p-4 text-red-700">
+          {error}
+        </p>
+      )}
+
+      {!loading && !error && equipment.length === 0 && (
+        <div className="rounded-lg border p-10 text-center">
+          <h2 className="text-xl font-semibold">
+            No equipment available
+          </h2>
+
+          <p className="mt-2 text-gray-500">
+            Approved equipment will appear here.
+          </p>
+        </div>
+      )}
+
+      {!loading && equipment.length > 0 && (
+        <>
+          <p className="mb-5 text-gray-500">
+            {equipment.length} equipment item(s) found
+          </p>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {equipment.map((item) => (
+              <article
+                key={item._id}
+                className="overflow-hidden rounded-xl border"
+              >
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="h-52 w-full object-cover"
+                />
+
+                <div className="p-5">
+                  <p className="mb-2 text-sm text-gray-500">
+                    {item.category}
+                  </p>
+
+                  <h2 className="text-xl font-semibold">
+                    {item.name}
+                  </h2>
+
+                  <p className="mt-2 line-clamp-3 text-sm text-gray-600">
+                    {item.description}
+                  </p>
+
+                  <div className="mt-4 space-y-2 text-sm">
+                    <p>
+                      <strong>Location:</strong>{" "}
+                      {item.location}
+                    </p>
+
+                    <p>
+                      <strong>Condition:</strong>{" "}
+                      {item.condition}
+                    </p>
+
+                    <p>
+                      <strong>Available:</strong>{" "}
+                      {item.availableQuantity}
+                    </p>
+                  </div>
+
+                  <div className="mt-5 border-t pt-4">
+                    <p className="text-xl font-bold">
+                      ৳{item.price}
+                      <span className="text-sm font-normal text-gray-500">
+                        {" "}/ {item.rentalType}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
+      )}
+    </main>
+  );
+}
