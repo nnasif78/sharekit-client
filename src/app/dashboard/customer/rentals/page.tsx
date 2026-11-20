@@ -2,7 +2,14 @@
 
 import { apiFetch } from "@/lib/api-request";
 import { reportError } from "@/lib/notifications";
-import { useEffect, useState } from "react";
+import {
+  compareDate,
+  DashboardCollectionPagination,
+  DashboardCollectionToolbar,
+  useDashboardCollection,
+  type DashboardSortOption,
+} from "@/components/dashboard-collection-controls";
+import { useEffect, useMemo, useState } from "react";
 
 type Rental = {
   _id: string;
@@ -17,13 +24,21 @@ type Rental = {
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const date = (value?: string) => value ? new Date(value).toLocaleDateString() : "—";
-const PAGE_SIZE = 9;
+const rentalSearchText = (rental: Rental) =>
+  `${rental.equipmentName} ${rental.status || ""} ${rental.paymentStatus || ""} ${rental.startDate || ""} ${rental.endDate || ""}`;
+const rentalSortOptions: DashboardSortOption<Rental>[] = [
+  { value: "booking-newest", label: "Booking date: newest", compare: (a, b) => compareDate(b.bookingDate, a.bookingDate) },
+  { value: "booking-oldest", label: "Booking date: oldest", compare: (a, b) => compareDate(a.bookingDate, b.bookingDate) },
+  { value: "rental-earliest", label: "Rental start: earliest", compare: (a, b) => compareDate(a.startDate, b.startDate) },
+  { value: "amount-high", label: "Amount: high to low", compare: (a, b) => (b.totalAmount || 0) - (a.totalAmount || 0) },
+  { value: "amount-low", label: "Amount: low to high", compare: (a, b) => (a.totalAmount || 0) - (b.totalAmount || 0) },
+];
 
 export default function CustomerRentalsPage() {
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     let active = true;
@@ -39,8 +54,16 @@ export default function CustomerRentalsPage() {
     return () => { active = false; };
   }, []);
 
-  const totalPages = Math.ceil(rentals.length / PAGE_SIZE);
-  const visibleRentals = rentals.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const filteredRentals = useMemo(
+    () => rentals.filter((rental) => statusFilter === "all" || (rental.status || "pending").toLowerCase() === statusFilter),
+    [rentals, statusFilter],
+  );
+  const collection = useDashboardCollection({
+    items: filteredRentals,
+    getSearchText: rentalSearchText,
+    sortOptions: rentalSortOptions,
+    initialSort: "booking-newest",
+  });
 
   return (
     <div className="space-y-7 text-zinc-950 dark:text-zinc-100">
@@ -49,8 +72,39 @@ export default function CustomerRentalsPage() {
         <span className="border border-stone-300 px-3 py-2 font-mono text-xs uppercase tracking-wider text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">{rentals.length} bookings</span>
       </header>
       {error && <p role="alert" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/70 dark:bg-red-950/50 dark:text-red-300">{error}</p>}
+      <DashboardCollectionToolbar
+        search={collection.search}
+        onSearchChange={collection.setSearch}
+        searchLabel="Search rentals"
+        searchPlaceholder="Search equipment, status, or payment"
+        sort={collection.sort}
+        onSortChange={collection.setSort}
+        sortOptions={rentalSortOptions}
+        pageSize={collection.pageSize}
+        onPageSizeChange={collection.setPageSize}
+      >
+        <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+          <span>Status</span>
+          <select
+            aria-label="Filter rentals by status"
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value);
+              collection.setPage(1);
+            }}
+            className="border border-stone-300 bg-white px-3 py-2 font-mono text-xs uppercase tracking-wider text-zinc-900 focus:border-zinc-950 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-amber-300"
+          >
+            <option value="all">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="completed">Completed</option>
+          </select>
+        </label>
+      </DashboardCollectionToolbar>
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading rentals…</p> : visibleRentals.map((rental) => {
+        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading rentals…</p> : collection.visibleItems.map((rental) => {
           const status = (rental.status || "pending").toLowerCase();
           const payment = rental.paymentStatus || "Pending";
           return (
@@ -72,34 +126,15 @@ export default function CustomerRentalsPage() {
             </article>
           );
         })}
-        {!loading && !rentals.length && <p className="col-span-full border border-stone-200 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">You have no rental bookings yet.</p>}
+        {!loading && !collection.totalItems && <p className="col-span-full border border-stone-200 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">{rentals.length ? "No rentals match your search or filters." : "You have no rental bookings yet."}</p>}
       </div>
-      {!loading && totalPages > 1 && (
-        <nav
-          aria-label="Rental history pagination"
-          className="flex items-center justify-between border-t border-stone-200 pt-4 dark:border-zinc-800"
-        >
-          <button
-            type="button"
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-            disabled={page === 1}
-            className="border border-stone-300 px-3 py-2 font-mono text-xs uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700"
-          >
-            Previous
-          </button>
-          <span aria-live="polite" className="font-mono text-xs uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-            disabled={page === totalPages}
-            className="border border-stone-300 px-3 py-2 font-mono text-xs uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700"
-          >
-            Next
-          </button>
-        </nav>
-      )}
+      {!loading && <DashboardCollectionPagination
+        page={collection.page}
+        pageCount={collection.pageCount}
+        pageSize={collection.pageSize}
+        totalItems={collection.totalItems}
+        onPageChange={collection.setPage}
+      />}
     </div>
   );
 }

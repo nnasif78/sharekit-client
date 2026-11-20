@@ -2,7 +2,14 @@
 
 import { apiFetch } from "@/lib/api-request";
 import { notifySuccess, reportError } from "@/lib/notifications";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  compareDate,
+  DashboardCollectionPagination,
+  DashboardCollectionToolbar,
+  useDashboardCollection,
+  type DashboardSortOption,
+} from "@/components/dashboard-collection-controls";
+import { useCallback, useEffect, useState } from "react";
 
 type AdminUser = {
   _id: string;
@@ -14,13 +21,26 @@ type AdminUser = {
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const userSearchText = (user: AdminUser) =>
+  `${user.name} ${user.email} ${user.role} ${user.disabled ? "disabled" : "active"}`;
+const userSortOptions: DashboardSortOption<AdminUser>[] = [
+  { value: "name-asc", label: "Name: A to Z", compare: (a, b) => a.name.localeCompare(b.name) },
+  { value: "name-desc", label: "Name: Z to A", compare: (a, b) => b.name.localeCompare(a.name) },
+  { value: "newest", label: "Registration: newest", compare: (a, b) => compareDate(b.createdAt, a.createdAt) },
+  { value: "oldest", label: "Registration: oldest", compare: (a, b) => compareDate(a.createdAt, b.createdAt) },
+];
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
+  const collection = useDashboardCollection({
+    items: users,
+    getSearchText: userSearchText,
+    sortOptions: userSortOptions,
+    initialSort: "newest",
+  });
 
   const load = useCallback(async () => {
     try {
@@ -49,11 +69,6 @@ export default function AdminUsersPage() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
-
-  const filtered = useMemo(
-    () => users.filter((user) => `${user.name} ${user.email}`.toLowerCase().includes(search.toLowerCase())),
-    [users, search],
-  );
 
   const updateUser = async (user: AdminUser, payload: { role?: string; disabled?: boolean }) => {
     const action = payload.role ? "role" : "access";
@@ -112,15 +127,17 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      <div className="border border-stone-200/90 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
-        <input
-          aria-label="Search users"
-          placeholder="Search name or email"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          className="w-full max-w-md border border-stone-300 bg-white px-4 py-2.5 text-sm text-zinc-950 placeholder:text-zinc-400 focus:border-zinc-950 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:placeholder:text-zinc-500 dark:focus:border-amber-300"
-        />
-      </div>
+      <DashboardCollectionToolbar
+        search={collection.search}
+        onSearchChange={collection.setSearch}
+        searchLabel="Search users"
+        searchPlaceholder="Search name, email, or role"
+        sort={collection.sort}
+        onSortChange={collection.setSort}
+        sortOptions={userSortOptions}
+        pageSize={collection.pageSize}
+        onPageSizeChange={collection.setPageSize}
+      />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         {loading ? (
@@ -128,7 +145,7 @@ export default function AdminUsersPage() {
             Loading users…
           </p>
         ) : (
-          filtered.map((user) => {
+          collection.visibleItems.map((user) => {
             const initials = (user.name || user.email || "U")
               .split(/\s+/)
               .slice(0, 2)
@@ -223,12 +240,19 @@ export default function AdminUsersPage() {
           })
         )}
 
-        {!loading && !filtered.length && (
+        {!loading && !collection.totalItems && (
           <p className="col-span-full border border-stone-200/90 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
             {users.length ? "No users match your search." : "No users found."}
           </p>
         )}
       </div>
+      {!loading && <DashboardCollectionPagination
+        page={collection.page}
+        pageCount={collection.pageCount}
+        pageSize={collection.pageSize}
+        totalItems={collection.totalItems}
+        onPageChange={collection.setPage}
+      />}
     </div>
   );
 }

@@ -3,14 +3,29 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { deleteEquipment, Equipment, getMyEquipment, updateEquipment } from "@/lib/equipment";
 import { notifySuccess, reportError } from "@/lib/notifications";
+import {
+  DashboardCollectionPagination,
+  DashboardCollectionToolbar,
+  useDashboardCollection,
+  type DashboardSortOption,
+} from "@/components/dashboard-collection-controls";
 
 const money = (amount: number) => `৳${amount.toLocaleString()}`;
+const equipmentSearchText = (item: Equipment) =>
+  `${item.name} ${item.category} ${item.location} ${item.brand || ""} ${item.model || ""} ${item.status || ""}`;
+const equipmentSortOptions: DashboardSortOption<Equipment>[] = [
+  { value: "name-asc", label: "Name: A to Z", compare: (a, b) => a.name.localeCompare(b.name) },
+  { value: "name-desc", label: "Name: Z to A", compare: (a, b) => b.name.localeCompare(a.name) },
+  { value: "price-low", label: "Price: low to high", compare: (a, b) => a.price - b.price },
+  { value: "price-high", label: "Price: high to low", compare: (a, b) => b.price - a.price },
+  { value: "quantity-high", label: "Availability: most", compare: (a, b) => b.availableQuantity - a.availableQuantity },
+  { value: "quantity-low", label: "Availability: least", compare: (a, b) => a.availableQuantity - b.availableQuantity },
+];
 
 export default function MyEquipmentPage() {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [selected, setSelected] = useState<Equipment | null>(null);
   const [editing, setEditing] = useState(false);
@@ -38,9 +53,16 @@ export default function MyEquipmentPage() {
     return () => { active = false; };
   }, []);
 
-  const filtered = useMemo(() => equipment.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase()) && (status === "all" || item.status === status)
-  ), [equipment, search, status]);
+  const filteredByStatus = useMemo(
+    () => equipment.filter((item) => status === "all" || item.status === status),
+    [equipment, status],
+  );
+  const collection = useDashboardCollection({
+    items: filteredByStatus,
+    getSearchText: equipmentSearchText,
+    sortOptions: equipmentSortOptions,
+    initialSort: "name-asc",
+  });
 
   const openEditor = (item: Equipment) => {
     setSelected(item);
@@ -84,14 +106,34 @@ export default function MyEquipmentPage() {
         <span className="border border-stone-300 px-3 py-2 font-mono text-xs uppercase tracking-wider text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">{equipment.length} listings</span>
       </header>
       {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/70 dark:bg-red-950/50 dark:text-red-300"><span>{error}</span><button className="border border-red-300 px-3 py-1 font-mono text-xs uppercase tracking-wider" onClick={() => void refresh()}>Retry</button></div>}
-      <div className="flex flex-col justify-between gap-3 border border-stone-200 bg-white px-4 py-3 sm:flex-row dark:border-zinc-800 dark:bg-zinc-900/60">
-        <input aria-label="Search equipment" placeholder="Search by equipment name" value={search} onChange={(event) => setSearch(event.target.value)} className="w-full border border-stone-300 bg-[#F7F6F2] px-3.5 py-2 text-sm outline-none focus:border-zinc-950 sm:max-w-sm dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-amber-300" />
-        <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value)} className="border border-stone-300 bg-[#F7F6F2] px-3.5 py-2 font-mono text-xs uppercase tracking-wider dark:border-zinc-700 dark:bg-zinc-950">
-          <option value="all">All statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option>
-        </select>
-      </div>
+      <DashboardCollectionToolbar
+        search={collection.search}
+        onSearchChange={collection.setSearch}
+        searchLabel="Search equipment"
+        searchPlaceholder="Search name, category, location, or brand"
+        sort={collection.sort}
+        onSortChange={collection.setSort}
+        sortOptions={equipmentSortOptions}
+        pageSize={collection.pageSize}
+        onPageSizeChange={collection.setPageSize}
+      >
+        <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+          <span>Status</span>
+          <select
+            aria-label="Filter equipment by status"
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value);
+              collection.setPage(1);
+            }}
+            className="border border-stone-300 bg-[#F7F6F2] px-3.5 py-2 font-mono text-xs uppercase tracking-wider text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+          >
+            <option value="all">All statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option>
+          </select>
+        </label>
+      </DashboardCollectionToolbar>
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading your equipment…</p> : filtered.map((item) => (
+        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading your equipment…</p> : collection.visibleItems.map((item) => (
           <article key={item._id} className="border border-stone-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60">
             {item.image && <div className="aspect-[16/10] border-b border-stone-200 bg-stone-100 dark:border-zinc-800 dark:bg-zinc-950"><img src={item.image} alt={item.name} className="h-full w-full object-cover" /></div>}
             <div className="p-5">
@@ -111,8 +153,15 @@ export default function MyEquipmentPage() {
             </div>
           </article>
         ))}
-        {!loading && !filtered.length && <p className="col-span-full border border-stone-200 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">{equipment.length ? "No listings match these filters." : "You have not added any equipment yet."}</p>}
+        {!loading && !collection.totalItems && <p className="col-span-full border border-stone-200 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">{equipment.length ? "No listings match these filters." : "You have not added any equipment yet."}</p>}
       </div>
+      {!loading && <DashboardCollectionPagination
+        page={collection.page}
+        pageCount={collection.pageCount}
+        pageSize={collection.pageSize}
+        totalItems={collection.totalItems}
+        onPageChange={collection.setPage}
+      />}
       {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) { setSelected(null); setEditing(false); } }}>
         <section role="dialog" aria-modal="true" aria-labelledby="equipment-dialog-title" className="w-full max-w-lg border border-stone-200 bg-[#F7F6F2] p-6 text-zinc-950 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100">
           <div className="mb-4 flex items-start justify-between gap-4 border-b border-stone-200 pb-4 dark:border-zinc-800"><div><p className="font-mono text-[10px] uppercase tracking-widest text-amber-700 dark:text-amber-300">{editing ? "Edit Record" : "Listing Detail"}</p><h2 id="equipment-dialog-title" className="mt-1 text-xl font-medium">{editing ? "Update equipment" : selected.name}</h2></div><button aria-label="Close" className="border border-stone-300 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider dark:border-zinc-700" onClick={() => { setSelected(null); setEditing(false); }}>Close</button></div>

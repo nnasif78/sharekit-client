@@ -2,7 +2,14 @@
 
 import { apiFetch } from "@/lib/api-request";
 import { notifySuccess, reportError } from "@/lib/notifications";
-import { useEffect, useState } from "react";
+import {
+  compareDate,
+  DashboardCollectionPagination,
+  DashboardCollectionToolbar,
+  useDashboardCollection,
+  type DashboardSortOption,
+} from "@/components/dashboard-collection-controls";
+import { useEffect, useMemo, useState } from "react";
 
 type Rental = {
   _id: string;
@@ -22,12 +29,22 @@ type Rental = {
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const statuses = ["pending", "approved", "rejected", "cancelled", "completed"];
 const date = (value?: string) => value ? new Date(value).toLocaleDateString() : "—";
+const rentalSearchText = (rental: Rental) =>
+  `${rental.equipmentName || ""} ${rental.customerName || ""} ${rental.customerEmail || ""} ${rental.ownerName || ""} ${rental.ownerEmail || ""} ${rental.status || ""} ${rental.paymentStatus || ""}`;
+const rentalSortOptions: DashboardSortOption<Rental>[] = [
+  { value: "start-latest", label: "Rental start: latest", compare: (a, b) => compareDate(b.startDate, a.startDate) },
+  { value: "start-earliest", label: "Rental start: earliest", compare: (a, b) => compareDate(a.startDate, b.startDate) },
+  { value: "amount-high", label: "Amount: high to low", compare: (a, b) => (b.bookingAmount || 0) - (a.bookingAmount || 0) },
+  { value: "amount-low", label: "Amount: low to high", compare: (a, b) => (a.bookingAmount || 0) - (b.bookingAmount || 0) },
+  { value: "equipment-asc", label: "Equipment: A to Z", compare: (a, b) => (a.equipmentName || "").localeCompare(b.equipmentName || "") },
+];
 
 export default function AdminRentalsPage() {
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     let active = true;
@@ -42,6 +59,17 @@ export default function AdminRentalsPage() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
+
+  const filteredRentals = useMemo(
+    () => rentals.filter((rental) => statusFilter === "all" || (rental.status || "pending").toLowerCase() === statusFilter),
+    [rentals, statusFilter],
+  );
+  const collection = useDashboardCollection({
+    items: filteredRentals,
+    getSearchText: rentalSearchText,
+    sortOptions: rentalSortOptions,
+    initialSort: "start-latest",
+  });
 
   const updateStatus = async (rental: Rental, status: string) => {
     try {
@@ -75,8 +103,32 @@ export default function AdminRentalsPage() {
         <span className="border border-stone-300 px-3 py-2 font-mono text-xs uppercase tracking-wider text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">{rentals.length} bookings</span>
       </header>
       {error && <p role="alert" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/70 dark:bg-red-950/50 dark:text-red-300">{error}</p>}
+      <DashboardCollectionToolbar
+        search={collection.search}
+        onSearchChange={collection.setSearch}
+        searchLabel="Search rentals"
+        searchPlaceholder="Search equipment, customer, or owner"
+        sort={collection.sort}
+        onSortChange={collection.setSort}
+        sortOptions={rentalSortOptions}
+        pageSize={collection.pageSize}
+        onPageSizeChange={collection.setPageSize}
+      >
+        <select
+          aria-label="Filter rentals by status"
+          value={statusFilter}
+          onChange={(event) => {
+            setStatusFilter(event.target.value);
+            collection.setPage(1);
+          }}
+          className="border border-stone-300 bg-[#F7F6F2] px-3.5 py-2 font-mono text-xs uppercase tracking-wider dark:border-zinc-700 dark:bg-zinc-950"
+        >
+          <option value="all">All statuses</option>
+          {statuses.map((status) => <option value={status} key={status}>{status}</option>)}
+        </select>
+      </DashboardCollectionToolbar>
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading rentals…</p> : rentals.map((rental) => {
+        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading rentals…</p> : collection.visibleItems.map((rental) => {
           const status = (rental.status || "pending").toLowerCase();
           const paymentStatus = rental.paymentStatus || "Pending";
           return (
@@ -102,8 +154,15 @@ export default function AdminRentalsPage() {
             </article>
           );
         })}
-        {!loading && !rentals.length && <p className="col-span-full border border-stone-200 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">No rental bookings found.</p>}
+        {!loading && !collection.totalItems && <p className="col-span-full border border-stone-200 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">{rentals.length ? "No rentals match your search or filters." : "No rental bookings found."}</p>}
       </div>
+      {!loading && <DashboardCollectionPagination
+        page={collection.page}
+        pageCount={collection.pageCount}
+        pageSize={collection.pageSize}
+        totalItems={collection.totalItems}
+        onPageChange={collection.setPage}
+      />}
     </div>
   );
 }

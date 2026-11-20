@@ -3,6 +3,13 @@
 import { apiFetch } from "@/lib/api-request";
 import { notifySuccess, reportError } from "@/lib/notifications";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  compareDate,
+  DashboardCollectionPagination,
+  DashboardCollectionToolbar,
+  useDashboardCollection,
+  type DashboardSortOption,
+} from "@/components/dashboard-collection-controls";
 
 type Equipment = {
   _id: string;
@@ -22,6 +29,15 @@ type Equipment = {
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const equipmentSearchText = (item: Equipment) =>
+  `${item.name} ${item.category} ${item.location} ${item.ownerName} ${item.ownerEmail} ${item.status}`;
+const equipmentSortOptions: DashboardSortOption<Equipment>[] = [
+  { value: "newest", label: "Submitted: newest", compare: (a, b) => compareDate(b.createdAt, a.createdAt) },
+  { value: "oldest", label: "Submitted: oldest", compare: (a, b) => compareDate(a.createdAt, b.createdAt) },
+  { value: "name-asc", label: "Name: A to Z", compare: (a, b) => a.name.localeCompare(b.name) },
+  { value: "price-low", label: "Price: low to high", compare: (a, b) => a.price - b.price },
+  { value: "price-high", label: "Price: high to low", compare: (a, b) => b.price - a.price },
+];
 
 const statusBadgeClass = (status: string) => {
   if (status === "approved") {
@@ -74,6 +90,12 @@ export default function AdminEquipmentPage() {
     () => equipment.filter((item) => statusFilter === "all" || item.status === statusFilter),
     [equipment, statusFilter],
   );
+  const collection = useDashboardCollection({
+    items: filtered,
+    getSearchText: equipmentSearchText,
+    sortOptions: equipmentSortOptions,
+    initialSort: "newest",
+  });
 
   const updateStatus = async (item: Equipment, status: "approved" | "rejected") => {
     try {
@@ -163,7 +185,17 @@ export default function AdminEquipmentPage() {
       </header>
 
       {/* Toolbar */}
-      <div className="flex flex-col justify-between gap-4 border border-stone-200/90 bg-white px-5 py-3.5 sm:flex-row sm:items-center dark:border-zinc-800 dark:bg-zinc-900/60">
+      <DashboardCollectionToolbar
+        search={collection.search}
+        onSearchChange={collection.setSearch}
+        searchLabel="Search equipment"
+        searchPlaceholder="Search listing, category, location, or owner"
+        sort={collection.sort}
+        onSortChange={collection.setSort}
+        sortOptions={equipmentSortOptions}
+        pageSize={collection.pageSize}
+        onPageSizeChange={collection.setPageSize}
+      >
         <span className="font-mono text-xs uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
           <strong className="font-semibold text-zinc-950 dark:text-amber-300">{pendingCount}</strong> pending approval
         </span>
@@ -171,7 +203,10 @@ export default function AdminEquipmentPage() {
         <select
           aria-label="Filter equipment by status"
           value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
+          onChange={(event) => {
+            setStatusFilter(event.target.value);
+            collection.setPage(1);
+          }}
           className="border border-stone-300 bg-[#F7F6F2] px-3.5 py-2 font-mono text-xs uppercase tracking-wider text-zinc-900 focus:border-zinc-950 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-amber-300"
         >
           <option value="all">All statuses</option>
@@ -179,7 +214,7 @@ export default function AdminEquipmentPage() {
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
         </select>
-      </div>
+      </DashboardCollectionToolbar>
 
       {/* Error Banner */}
       {error && (
@@ -204,7 +239,7 @@ export default function AdminEquipmentPage() {
             Loading equipment…
           </p>
         ) : (
-          filtered.map((item) => {
+          collection.visibleItems.map((item) => {
             const isBusy = busy === item._id;
             const currentStatus = item.status || "pending";
 
@@ -339,12 +374,19 @@ export default function AdminEquipmentPage() {
           })
         )}
 
-        {!loading && !filtered.length && (
+        {!loading && !collection.totalItems && (
           <p className="col-span-full border border-stone-200/90 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
-            No equipment matches this status.
+            {equipment.length ? "No listings match your search or filters." : "No equipment found."}
           </p>
         )}
       </div>
+      {!loading && <DashboardCollectionPagination
+        page={collection.page}
+        pageCount={collection.pageCount}
+        pageSize={collection.pageSize}
+        totalItems={collection.totalItems}
+        onPageChange={collection.setPage}
+      />}
 
       {/* Edit Modal */}
       {editing && (

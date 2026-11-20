@@ -2,7 +2,14 @@
 
 import { apiFetch } from "@/lib/api-request";
 import { reportError } from "@/lib/notifications";
-import { useEffect, useState } from "react";
+import {
+  compareDate,
+  DashboardCollectionPagination,
+  DashboardCollectionToolbar,
+  useDashboardCollection,
+  type DashboardSortOption,
+} from "@/components/dashboard-collection-controls";
+import { useMemo, useEffect, useState } from "react";
 
 type OwnerRental = {
   _id: string;
@@ -19,11 +26,21 @@ type OwnerRental = {
 };
 
 const date = (value?: string) => value ? new Date(value).toLocaleDateString() : "—";
+const rentalSearchText = (rental: OwnerRental) =>
+  `${rental.equipmentName || ""} ${rental.customerName || ""} ${rental.customerEmail || ""} ${rental.status || ""} ${rental.paymentStatus || ""}`;
+const rentalSortOptions: DashboardSortOption<OwnerRental>[] = [
+  { value: "start-latest", label: "Rental start: latest", compare: (a, b) => compareDate(b.startDate, a.startDate) },
+  { value: "start-earliest", label: "Rental start: earliest", compare: (a, b) => compareDate(a.startDate, b.startDate) },
+  { value: "amount-high", label: "Amount: high to low", compare: (a, b) => (b.bookingAmount || 0) - (a.bookingAmount || 0) },
+  { value: "amount-low", label: "Amount: low to high", compare: (a, b) => (a.bookingAmount || 0) - (b.bookingAmount || 0) },
+  { value: "equipment-asc", label: "Equipment: A to Z", compare: (a, b) => (a.equipmentName || "").localeCompare(b.equipmentName || "") },
+];
 
 export default function OwnerRentalsPage() {
   const [rentals, setRentals] = useState<OwnerRental[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     let active = true;
@@ -39,6 +56,17 @@ export default function OwnerRentalsPage() {
     return () => { active = false; };
   }, []);
 
+  const filteredRentals = useMemo(
+    () => rentals.filter((rental) => statusFilter === "all" || (rental.status || "pending").toLowerCase() === statusFilter),
+    [rentals, statusFilter],
+  );
+  const collection = useDashboardCollection({
+    items: filteredRentals,
+    getSearchText: rentalSearchText,
+    sortOptions: rentalSortOptions,
+    initialSort: "start-latest",
+  });
+
   return (
     <div className="space-y-7 text-zinc-950 dark:text-zinc-100">
       <header className="flex flex-col justify-between gap-4 border-b border-stone-200 pb-6 sm:flex-row sm:items-end dark:border-zinc-800">
@@ -46,8 +74,39 @@ export default function OwnerRentalsPage() {
         <span className="border border-stone-300 px-3 py-2 font-mono text-xs uppercase tracking-wider text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">{rentals.length} bookings</span>
       </header>
       {error && <p role="alert" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/70 dark:bg-red-950/50 dark:text-red-300">{error}</p>}
+      <DashboardCollectionToolbar
+        search={collection.search}
+        onSearchChange={collection.setSearch}
+        searchLabel="Search equipment rentals"
+        searchPlaceholder="Search equipment, customer, or status"
+        sort={collection.sort}
+        onSortChange={collection.setSort}
+        sortOptions={rentalSortOptions}
+        pageSize={collection.pageSize}
+        onPageSizeChange={collection.setPageSize}
+      >
+        <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+          <span>Status</span>
+          <select
+            aria-label="Filter equipment rentals by status"
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value);
+              collection.setPage(1);
+            }}
+            className="border border-stone-300 bg-white px-3 py-2 font-mono text-xs uppercase tracking-wider text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+          >
+            <option value="all">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="completed">Completed</option>
+          </select>
+        </label>
+      </DashboardCollectionToolbar>
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading rental bookings…</p> : rentals.map((rental) => {
+        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading rental bookings…</p> : collection.visibleItems.map((rental) => {
           const status = (rental.status || "pending").toLowerCase();
           const payment = rental.paymentStatus || "Pending";
           return (
@@ -68,8 +127,15 @@ export default function OwnerRentalsPage() {
             </article>
           );
         })}
-        {!loading && !rentals.length && <p className="col-span-full border border-stone-200 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">No rental bookings for your equipment yet.</p>}
+        {!loading && !collection.totalItems && <p className="col-span-full border border-stone-200 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">{rentals.length ? "No rentals match your search or filters." : "No rental bookings for your equipment yet."}</p>}
       </div>
+      {!loading && <DashboardCollectionPagination
+        page={collection.page}
+        pageCount={collection.pageCount}
+        pageSize={collection.pageSize}
+        totalItems={collection.totalItems}
+        onPageChange={collection.setPage}
+      />}
     </div>
   );
 }
