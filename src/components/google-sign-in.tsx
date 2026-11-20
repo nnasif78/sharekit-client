@@ -13,9 +13,11 @@ export default function GoogleSignIn() {
       setLoading(true);
       setError("");
 
+      const callbackURL = new URLSearchParams(window.location.search).get("callbackURL");
+
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/",
+        callbackURL: callbackURL?.startsWith("/") ? callbackURL : "/",
       });
     } catch {
       setError("Google authentication failed. Please try again.");

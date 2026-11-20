@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 
 interface Equipment {
@@ -30,6 +31,9 @@ export default function EquipmentPage() {
   const [category, setCategory] = useState("");
   const [rentalType, setRentalType] = useState("");
   const [sort, setSort] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [availability, setAvailability] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [favoriteError, setFavoriteError] = useState("");
 
@@ -65,10 +69,13 @@ export default function EquipmentPage() {
         if (search.trim()) params.set("search", search.trim());
         if (category) params.set("category", category);
         if (rentalType) params.set("rentalType", rentalType);
+        if (minPrice) params.set("minPrice", minPrice);
+        if (maxPrice) params.set("maxPrice", maxPrice);
+        if (availability) params.set("availability", availability);
         if (sort) params.set("sort", sort);
 
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/equipment?${params.toString()}`
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/equipment?${params.toString()}`
         );
 
         const result = await response.json();
@@ -92,7 +99,7 @@ export default function EquipmentPage() {
     };
 
     fetchEquipment();
-  }, [search, category, rentalType, sort]);
+  }, [search, category, rentalType, minPrice, maxPrice, availability, sort]);
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-12">
@@ -106,7 +113,7 @@ export default function EquipmentPage() {
         </p>
       </div>
 
-      <div className="mb-8 grid gap-4 md:grid-cols-4">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <input
           type="search"
           placeholder="Search equipment..."
@@ -139,6 +146,10 @@ export default function EquipmentPage() {
           <option value="Other">Other</option>
         </select>
 
+        <input type="number" min="0" aria-label="Minimum rental price" placeholder="Min price" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="rounded-lg border p-3" />
+        <input type="number" min="0" aria-label="Maximum rental price" placeholder="Max price" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="rounded-lg border p-3" />
+        <select aria-label="Filter availability" value={availability} onChange={(e) => setAvailability(e.target.value)} className="rounded-lg border p-3"><option value="">Any availability</option><option value="available">Available now</option><option value="unavailable">Currently unavailable</option></select>
+
         <select
           value={rentalType}
           onChange={(e) => setRentalType(e.target.value)}
@@ -158,6 +169,7 @@ export default function EquipmentPage() {
           <option value="">Newest First</option>
           <option value="price_asc">Price: Low to High</option>
           <option value="price_desc">Price: High to Low</option>
+          <option value="recent">Recently Added</option>
         </select>
       </div>
 
@@ -230,8 +242,8 @@ export default function EquipmentPage() {
                     </p>
 
                     <p>
-                      <strong>Available:</strong>{" "}
-                      {item.availableQuantity}
+                      <strong>Availability:</strong>{" "}
+                      {item.availableQuantity > 0 ? `${item.availableQuantity} available` : "Currently unavailable"}
                     </p>
                   </div>
 
@@ -243,6 +255,7 @@ export default function EquipmentPage() {
                       </span>
                     </p>
                   </div>
+                  <Link href={`/equipment/${item._id}`} className="mt-4 block w-full rounded-lg bg-black px-4 py-2.5 text-center font-medium text-white hover:bg-gray-800">View Details</Link>
                   {isCustomer && <button onClick={() => void toggleFavorite(item._id)} className="mt-4 w-full rounded-lg border px-4 py-2 font-medium hover:bg-gray-50">{favorites.includes(item._id) ? "Remove from favorites" : "Add to favorites"}</button>}
                 </div>
               </article>
