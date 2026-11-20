@@ -1,3 +1,5 @@
+import { notifyAuthRestriction } from "@/lib/notifications";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 type TokenResponse = {
@@ -46,12 +48,47 @@ async function sendWithToken(input: RequestInfo | URL, init: RequestInit, token:
 }
 
 export async function apiFetch(path: string, init: RequestInit = {}) {
-  const token = await getAccessToken();
+  let token: string;
+  try {
+    token = await getAccessToken();
+  } catch (error) {
+    notifyAuthRestriction(
+      401,
+      error instanceof Error
+        ? error.message
+        : "Your session could not be verified. Please sign in again.",
+    );
+    throw error;
+  }
+
   const url = /^https?:\/\//i.test(path) ? path : `${API_URL}${path}`;
   const response = await sendWithToken(url, init, token);
+  if (response.status === 403) {
+    notifyAuthRestriction(403, "Your account does not have access to this resource.");
+    return response;
+  }
   if (response.status !== 401) return response;
 
   clearAccessToken();
-  const refreshedToken = await getAccessToken(true);
-  return sendWithToken(url, init, refreshedToken);
+  let refreshedToken: string;
+  try {
+    refreshedToken = await getAccessToken(true);
+  } catch (error) {
+    notifyAuthRestriction(
+      401,
+      error instanceof Error
+        ? error.message
+        : "Your session has expired. Please sign in again.",
+    );
+    throw error;
+  }
+
+  const refreshedResponse = await sendWithToken(url, init, refreshedToken);
+  if (refreshedResponse.status === 401) {
+    clearAccessToken();
+    notifyAuthRestriction(401, "Your session has expired. Please sign in again.");
+  } else if (refreshedResponse.status === 403) {
+    notifyAuthRestriction(403, "Your account does not have access to this resource.");
+  }
+  return refreshedResponse;
 }

@@ -21,10 +21,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!isPending && !session) router.replace(`/login?callbackURL=${encodeURIComponent(pathname)}`);
-  }, [isPending, pathname, router, session]);
+    if (!isPending && session && role !== "admin") router.replace("/forbidden");
+  }, [isPending, pathname, role, router, session]);
 
-  if (isPending || !session) return <main className="dashboard-loading">Loading admin dashboard…</main>;
-  if (role !== "admin") return <main className="dashboard-access"><h1>Admin access required</h1><p>Your account does not have administrator access.</p></main>;
+  if (isPending || !session || role !== "admin") return <main className="dashboard-loading">Loading admin dashboard…</main>;
 
   return (
     <div className="dashboard-shell">

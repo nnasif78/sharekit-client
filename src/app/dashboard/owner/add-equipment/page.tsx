@@ -2,6 +2,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/api-request";
+import { notifyError, notifySuccess, reportError } from "@/lib/notifications";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
@@ -48,11 +49,14 @@ export default function AddEquipmentPage() {
     setImageError("");
     const apiKey = process.env.NEXT_PUBLIC_IMGBB_API_KEY;
     if (!apiKey) {
-      setImageError("Image upload is not configured. Add NEXT_PUBLIC_IMGBB_API_KEY to the client environment.");
+      const message = "Image upload is not configured. Add NEXT_PUBLIC_IMGBB_API_KEY to the client environment.";
+      setImageError(message);
+      notifyError(message);
       return;
     }
     if (!file.type.startsWith("image/")) {
       setImageError("Choose an image file.");
+      notifyError("Choose an image file.");
       return;
     }
     try {
@@ -65,8 +69,9 @@ export default function AddEquipmentPage() {
         throw new Error(result.error?.message || "Image upload failed.");
       }
       setFormData((previous) => ({ ...previous, image: result.data.url }));
+      notifySuccess("Image uploaded.");
     } catch (err) {
-      setImageError(err instanceof Error ? err.message : "Image upload failed.");
+      setImageError(reportError(err, "Image upload failed."));
     } finally {
       setUploadingImage(false);
       event.target.value = "";
@@ -83,6 +88,7 @@ export default function AddEquipmentPage() {
 
     if (!session?.user) {
       setError("Please login before adding equipment.");
+      notifyError("Please login before adding equipment.");
       return;
     }
 
@@ -91,11 +97,13 @@ export default function AddEquipmentPage() {
 
     if (!Number.isFinite(price) || price <= 0) {
       setError("Enter a valid rental price.");
+      notifyError("Enter a valid rental price.");
       return;
     }
 
     if (!Number.isInteger(availableQuantity) || availableQuantity <= 0) {
       setError("Quantity must be a positive whole number.");
+      notifyError("Quantity must be a positive whole number.");
       return;
     }
 
@@ -120,11 +128,12 @@ export default function AddEquipmentPage() {
 
       const result = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !result.success) {
         throw new Error(result.message || "Failed to add equipment.");
       }
 
       setSuccess("Equipment submitted successfully! Waiting for admin approval.");
+      notifySuccess("Equipment submitted for admin approval.");
 
       setFormData({
         name: "",
@@ -141,50 +150,44 @@ export default function AddEquipmentPage() {
         rentalTerms: "",
       });
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong."
-      );
+      setError(reportError(err, "Something went wrong."));
     } finally {
       setLoading(false);
     }
   };
 
   if (isPending) {
-    return <p className="p-10">Loading...</p>;
+    return <p className="border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading...</p>;
   }
 
   if (!session) {
     return (
-      <div className="p-10 text-center">
+      <div className="border border-stone-200 bg-white p-10 text-center text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
         Please login to continue.
       </div>
     );
   }
 
   const inputClass =
-    "w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-600";
+    "w-full border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-zinc-950 outline-none focus:border-zinc-950 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-amber-300";
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12">
-      <h1 className="mb-2 text-3xl font-bold">
-        Add Equipment
-      </h1>
+    <main className="mx-auto max-w-4xl space-y-7 text-zinc-950 dark:text-zinc-100">
+      <header className="border-b border-stone-200 pb-6 dark:border-zinc-800">
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Owner Listing Intake</p>
+        <h1 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">Add Equipment</h1>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Submit your equipment for customers to rent.</p>
+      </header>
 
-      <p className="mb-8 text-gray-500">
-        Submit your equipment for customers to rent.
-      </p>
-
-      <div className="mb-6 rounded-xl border bg-gray-50 p-4 text-sm">
-        <p><strong>Owner:</strong> {session.user.name} · {session.user.email}</p>
-        <p className="mt-1 text-gray-600"><strong>Listing status:</strong> Pending admin approval</p>
+      <div className="border border-stone-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900/60">
+        <p className="font-mono text-[11px] uppercase tracking-wider"><strong className="text-zinc-500 dark:text-zinc-400">Owner:</strong> {session.user.name} · {session.user.email}</p>
+        <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-300"><strong>Listing status:</strong> Pending admin approval</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="border border-stone-200 bg-white p-5 sm:p-7 space-y-5 dark:border-zinc-800 dark:bg-zinc-900/60">
 
         <div>
-          <label className="mb-2 block font-medium">
+          <label className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
             Equipment Name
           </label>
           <input
@@ -198,7 +201,7 @@ export default function AddEquipmentPage() {
         </div>
 
         <div>
-          <label className="mb-2 block font-medium">
+          <label className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
             Description
           </label>
           <textarea
@@ -214,7 +217,7 @@ export default function AddEquipmentPage() {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <label className="mb-2 block font-medium">
+            <label className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
               Category
             </label>
             <select
@@ -237,7 +240,7 @@ export default function AddEquipmentPage() {
           </div>
 
           <div>
-            <label className="mb-2 block font-medium">
+            <label className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
               Location
             </label>
             <input
@@ -253,7 +256,7 @@ export default function AddEquipmentPage() {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <label className="mb-2 block font-medium">
+            <label className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
               Rental Price (৳)
             </label>
             <input
@@ -269,7 +272,7 @@ export default function AddEquipmentPage() {
           </div>
 
           <div>
-            <label className="mb-2 block font-medium">
+            <label className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
               Rental Type
             </label>
             <select
@@ -287,7 +290,7 @@ export default function AddEquipmentPage() {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <label className="mb-2 block font-medium">
+            <label className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
               Available Quantity
             </label>
             <input
@@ -302,7 +305,7 @@ export default function AddEquipmentPage() {
           </div>
 
           <div>
-            <label className="mb-2 block font-medium">
+            <label className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
               Equipment Condition
             </label>
             <select
@@ -322,7 +325,7 @@ export default function AddEquipmentPage() {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <label className="mb-2 block font-medium">
+            <label className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
               Brand
             </label>
             <input
@@ -353,10 +356,10 @@ export default function AddEquipmentPage() {
             Equipment Image
           </label>
           <input type="file" accept="image/*" onChange={handleImageUpload} className={inputClass} disabled={uploadingImage} />
-          {uploadingImage && <p className="mt-2 text-sm text-gray-500">Uploading image…</p>}
+          {uploadingImage && <p className="mt-2 font-mono text-xs uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Uploading image…</p>}
           {imageError && <p className="mt-2 text-sm text-red-600">{imageError}</p>}
-          {formData.image && <img src={formData.image} alt="Equipment preview" className="mt-3 h-40 w-full rounded-lg object-cover" />}
-          <p className="my-2 text-sm text-gray-500">Or paste an image URL</p>
+          {formData.image && <img src={formData.image} alt="Equipment preview" className="mt-3 h-40 w-full border border-stone-200 object-cover dark:border-zinc-800" />}
+          <p className="my-2 font-mono text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Or paste an image URL</p>
           <input
             type="url"
             name="image"
@@ -369,7 +372,7 @@ export default function AddEquipmentPage() {
         </div>
 
         <div>
-          <label className="mb-2 block font-medium">
+          <label className="mb-2 block font-mono text-[11px] uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
             Rental Terms and Conditions
           </label>
           <textarea
@@ -383,13 +386,13 @@ export default function AddEquipmentPage() {
         </div>
 
         {error && (
-          <p className="rounded-lg bg-red-50 p-3 text-red-600">
+          <p className="border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/70 dark:bg-red-950/50 dark:text-red-300">
             {error}
           </p>
         )}
 
         {success && (
-          <p className="rounded-lg bg-green-50 p-3 text-green-700">
+          <p className="border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/50 dark:text-emerald-300">
             {success}
           </p>
         )}
@@ -397,7 +400,7 @@ export default function AddEquipmentPage() {
         <button
           type="submit"
           disabled={loading || uploadingImage}
-          className="w-full rounded-lg bg-black p-3 font-semibold text-white disabled:opacity-50"
+          className="w-full border border-zinc-950 bg-zinc-950 p-3 font-mono text-xs uppercase tracking-[0.14em] text-white disabled:opacity-50 dark:border-amber-300 dark:bg-amber-300 dark:text-zinc-950"
         >
           {loading ? "Submitting..." : "Submit Equipment"}
         </button>

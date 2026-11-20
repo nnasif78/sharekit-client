@@ -19,10 +19,10 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (!isPending && !session) router.replace(`/login?callbackURL=${encodeURIComponent(pathname)}`);
-  }, [isPending, pathname, router, session]);
+    if (!isPending && session && role !== "customer") router.replace("/forbidden");
+  }, [isPending, pathname, role, router, session]);
 
-  if (isPending || !session) return <main className="dashboard-loading">Loading customer dashboard…</main>;
-  if (role !== "customer") return <main className="dashboard-access"><h1>Customer access required</h1><p>This dashboard is available to customer accounts only.</p></main>;
+  if (isPending || !session || role !== "customer") return <main className="dashboard-loading">Loading customer dashboard…</main>;
 
   return (
     <div className="dashboard-shell">

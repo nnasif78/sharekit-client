@@ -21,10 +21,10 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!isPending && !session) router.replace(`/login?callbackURL=${encodeURIComponent(pathname)}`);
-  }, [isPending, pathname, router, session]);
+    if (!isPending && session && role !== "owner") router.replace("/forbidden");
+  }, [isPending, pathname, role, router, session]);
 
-  if (isPending || !session) return <main className="dashboard-loading">Loading owner dashboard…</main>;
-  if (role !== "owner") return <main className="dashboard-access"><h1>Owner access required</h1><p>Your account does not have the owner role yet. Contact an administrator to enable owner access.</p></main>;
+  if (isPending || !session || role !== "owner") return <main className="dashboard-loading">Loading owner dashboard…</main>;
 
   return (
     <div className="dashboard-shell">

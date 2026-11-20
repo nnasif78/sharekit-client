@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/api-request";
+import { notifySuccess, reportError } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -37,7 +38,7 @@ export default function CustomerFavoritesPage() {
         return result.data || [];
       })
       .then((data) => { if (active) setFavorites(data); })
-      .catch((err: unknown) => { if (active) setError(err instanceof Error ? err.message : "Could not load favorites."); })
+      .catch((err: unknown) => { if (active) setError(reportError(err, "Could not load favorites.")); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
@@ -51,47 +52,48 @@ export default function CustomerFavoritesPage() {
       if (!response.ok || !result.success) throw new Error(result.message || "Could not remove favorite.");
       setFavorites((items) => items.filter((favorite) => favorite._id !== item._id));
       if (selected?._id === item._id) setSelected(null);
+      notifySuccess("Removed from favorites.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not remove favorite.");
+      setError(reportError(err, "Could not remove favorite."));
     } finally {
       setBusy("");
     }
   };
 
   return (
-    <div>
-      <header className="dashboard-page-heading">
-        <div><p className="dashboard-eyebrow">CUSTOMER DASHBOARD</p><h1>Favorites</h1><p>Equipment you have saved for later.</p></div>
-        <span className="dashboard-count">{favorites.length} saved</span>
+    <div className="space-y-7 text-zinc-950 dark:text-zinc-100">
+      <header className="flex flex-col justify-between gap-4 border-b border-stone-200 pb-6 sm:flex-row sm:items-end dark:border-zinc-800">
+        <div><p className="font-mono text-xs uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Customer Saved Gear</p><h1 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">Favorites</h1><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Equipment you have saved for later.</p></div>
+        <span className="border border-stone-300 px-3 py-2 font-mono text-xs uppercase tracking-wider text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">{favorites.length} saved</span>
       </header>
-      {error && <p role="alert" className="dashboard-error">{error}</p>}
-      <div className="dashboard-card-grid">
-        {loading ? <p className="dashboard-empty">Loading favorites…</p> : favorites.map((item) => (
-          <article key={item._id} className="dashboard-card">
-            {item.image && <div className="dashboard-card-media"><img src={item.image} alt={item.name} /></div>}
-            <div className="dashboard-card-body">
-              <div><h2 className="dashboard-card-title">{item.name}</h2><p className="dashboard-card-copy">{item.category} · {item.location}</p></div>
-              <dl className="dashboard-card-details">
-                <div><dt>Rental price</dt><dd>৳{item.price.toLocaleString()} / {item.rentalType}</dd></div>
-                <div><dt>Available</dt><dd>{item.availableQuantity}</dd></div>
+      {error && <p role="alert" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/70 dark:bg-red-950/50 dark:text-red-300">{error}</p>}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading favorites…</p> : favorites.map((item) => (
+          <article key={item._id} className="border border-stone-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60">
+            {item.image && <div className="aspect-[16/10] border-b border-stone-200 bg-stone-100 dark:border-zinc-800 dark:bg-zinc-950"><img src={item.image} alt={item.name} className="h-full w-full object-cover" /></div>}
+            <div className="p-5">
+              <div><h2 className="text-lg font-medium tracking-tight">{item.name}</h2><p className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{item.category} · {item.location}</p></div>
+              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-stone-100 pt-4 dark:border-zinc-800">
+                <div><dt className="font-mono text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Rental price</dt><dd className="mt-0.5 font-mono text-sm">৳{item.price.toLocaleString()} / {item.rentalType}</dd></div>
+                <div><dt className="font-mono text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Available</dt><dd className="mt-0.5 font-mono text-sm">{item.availableQuantity}</dd></div>
               </dl>
-              <div className="dashboard-card-actions">
-                <button onClick={() => setSelected(item)} className="dashboard-action dashboard-action-primary">View details</button>
-                <button disabled={busy === item._id} onClick={() => void remove(item)} className="dashboard-action dashboard-action-danger">{busy === item._id ? "Removing…" : "Remove favorite"}</button>
+              <div className="mt-5 flex gap-2 border-t border-stone-100 pt-4 dark:border-zinc-800">
+                <button onClick={() => setSelected(item)} className="border border-zinc-950 bg-zinc-950 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-white dark:border-amber-300 dark:bg-amber-300 dark:text-zinc-950">View details</button>
+                <button disabled={busy === item._id} onClick={() => void remove(item)} className="border border-red-300 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-red-700 disabled:opacity-50 dark:border-red-800 dark:text-red-300">{busy === item._id ? "Removing…" : "Remove favorite"}</button>
               </div>
             </div>
           </article>
         ))}
-        {!loading && !favorites.length && <div className="dashboard-empty">You have not saved any equipment yet.<br /><Link href="/equipment" className="mt-3 inline-block font-semibold text-primary hover:underline">Browse equipment</Link></div>}
+        {!loading && !favorites.length && <div className="col-span-full border border-stone-200 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">You have not saved any equipment yet.<br /><Link href="/equipment" className="mt-3 inline-block font-mono text-xs uppercase tracking-wider text-amber-700 hover:underline dark:text-amber-300">Browse equipment</Link></div>}
       </div>
-      {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null); }}>
-        <section role="dialog" aria-modal="true" aria-labelledby="favorite-title" className="dashboard-modal">
-          <div className="mb-4 flex justify-between gap-4"><h2 id="favorite-title" className="text-xl font-semibold">{selected.name}</h2><button aria-label="Close" className="dashboard-action" onClick={() => setSelected(null)}>Close</button></div>
-          {selected.image && <img src={selected.image} alt={selected.name} className="h-56 w-full rounded-xl object-cover" />}
-          <p className="mt-4 text-sm text-muted-foreground">{selected.category} · {selected.location}</p>
+      {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null); }}>
+        <section role="dialog" aria-modal="true" aria-labelledby="favorite-title" className="w-full max-w-lg border border-stone-200 bg-[#F7F6F2] p-6 text-zinc-950 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100">
+          <div className="mb-4 flex justify-between gap-4 border-b border-stone-200 pb-4 dark:border-zinc-800"><div><p className="font-mono text-[10px] uppercase tracking-widest text-amber-700 dark:text-amber-300">Saved Item</p><h2 id="favorite-title" className="mt-1 text-xl font-medium">{selected.name}</h2></div><button aria-label="Close" className="border border-stone-300 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider dark:border-zinc-700" onClick={() => setSelected(null)}>Close</button></div>
+          {selected.image && <img src={selected.image} alt={selected.name} className="h-56 w-full border border-stone-200 object-cover dark:border-zinc-800" />}
+          <p className="mt-4 font-mono text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{selected.category} · {selected.location}</p>
           <p className="mt-2">{selected.description}</p>
           <p className="mt-3 text-sm">{selected.condition} · {selected.availableQuantity} available · ৳{selected.price.toLocaleString()} / {selected.rentalType}</p>
-          <button className="mt-5 dashboard-action" onClick={() => setSelected(null)}>Close</button>
+          <button className="mt-5 border border-stone-300 px-4 py-2 font-mono text-xs uppercase tracking-wider dark:border-zinc-700" onClick={() => setSelected(null)}>Close</button>
         </section>
       </div>}
     </div>

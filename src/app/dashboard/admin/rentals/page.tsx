@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/api-request";
+import { notifySuccess, reportError } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 
 type Rental = {
@@ -37,7 +38,7 @@ export default function AdminRentalsPage() {
         return result.data || [];
       })
       .then((data) => { if (active) setRentals(data); })
-      .catch((err: unknown) => { if (active) setError(err instanceof Error ? err.message : "Could not load rentals."); })
+      .catch((err: unknown) => { if (active) setError(reportError(err, "Could not load rentals.")); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
@@ -55,39 +56,44 @@ export default function AdminRentalsPage() {
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "Could not update booking.");
       setRentals((items) => items.map((item) => item._id === rental._id ? { ...item, status } : item));
+      notifySuccess(`Booking marked ${status}.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not update booking.");
+      setError(reportError(err, "Could not update booking."));
     } finally {
       setBusy("");
     }
   };
 
   return (
-    <div>
-      <header className="dashboard-page-heading">
-        <div><p className="dashboard-eyebrow">ADMIN DASHBOARD</p><h1>All Rentals</h1><p>Monitor booking activity and update booking status.</p></div>
-        <span className="dashboard-count">{rentals.length} bookings</span>
+    <div className="space-y-7 text-zinc-950 dark:text-zinc-100">
+      <header className="flex flex-col justify-between gap-4 border-b border-stone-200 pb-6 sm:flex-row sm:items-end dark:border-zinc-800">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Admin Rental Desk</p>
+          <h1 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">All Rentals</h1>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Monitor booking activity and update booking status.</p>
+        </div>
+        <span className="border border-stone-300 px-3 py-2 font-mono text-xs uppercase tracking-wider text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">{rentals.length} bookings</span>
       </header>
-      {error && <p role="alert" className="dashboard-error">{error}</p>}
-      <div className="dashboard-card-grid">
-        {loading ? <p className="dashboard-empty">Loading rentals…</p> : rentals.map((rental) => {
+      {error && <p role="alert" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/70 dark:bg-red-950/50 dark:text-red-300">{error}</p>}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading rentals…</p> : rentals.map((rental) => {
           const status = (rental.status || "pending").toLowerCase();
           const paymentStatus = rental.paymentStatus || "Pending";
           return (
-            <article key={rental._id} className="dashboard-card">
-              <div className="dashboard-card-body">
-                <div className="dashboard-card-topline">
-                  <div><p className="dashboard-eyebrow">BOOKING</p><h2 className="dashboard-card-title mt-2">{rental.equipmentName || "Equipment rental"}</h2></div>
-                  <span className={`dashboard-status dashboard-status-${status}`}>{status}</span>
+            <article key={rental._id} className="border border-stone-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60">
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-3 border-b border-stone-100 pb-4 dark:border-zinc-800">
+                  <div><p className="font-mono text-[10px] uppercase tracking-widest text-amber-700 dark:text-amber-300">Booking</p><h2 className="mt-1 text-lg font-medium tracking-tight">{rental.equipmentName || "Equipment rental"}</h2></div>
+                  <span className="border border-amber-600/30 bg-amber-500/10 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-amber-800 dark:border-amber-300/30 dark:text-amber-300">{status}</span>
                 </div>
-                <dl className="dashboard-card-details">
-                  <div><dt>Customer</dt><dd>{rental.customerName || "Customer"}<span className="dashboard-detail-sub">{rental.customerEmail || "—"}</span></dd></div>
-                  <div><dt>Owner</dt><dd>{rental.ownerName || "Owner"}<span className="dashboard-detail-sub">{rental.ownerEmail || "—"}</span></dd></div>
-                  <div><dt>Rental period</dt><dd>{rental.duration || `${date(rental.startDate)} – ${date(rental.endDate)}`}</dd></div>
-                  <div><dt>Booking amount</dt><dd>{rental.bookingAmount == null ? "—" : `৳${rental.bookingAmount.toLocaleString()}`}</dd></div>
-                  <div><dt>Payment</dt><dd><span className={`dashboard-status dashboard-status-${paymentStatus.toLowerCase()}`}>{paymentStatus}</span></dd></div>
-                  <div><dt>Update status</dt><dd>
-                    <select aria-label={`Booking status for ${rental.equipmentName || "rental"}`} disabled={busy === rental._id} value={status} onChange={(event) => void updateStatus(rental, event.target.value)} className="dashboard-control dashboard-status-select">
+                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+                  <div><dt className="font-mono text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Customer</dt><dd className="mt-0.5 text-sm">{rental.customerName || "Customer"}<span className="mt-0.5 block truncate font-mono text-[10px] text-zinc-500 dark:text-zinc-400">{rental.customerEmail || "—"}</span></dd></div>
+                  <div><dt className="font-mono text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Owner</dt><dd className="mt-0.5 text-sm">{rental.ownerName || "Owner"}<span className="mt-0.5 block truncate font-mono text-[10px] text-zinc-500 dark:text-zinc-400">{rental.ownerEmail || "—"}</span></dd></div>
+                  <div><dt className="font-mono text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Rental period</dt><dd className="mt-0.5 text-sm">{rental.duration || `${date(rental.startDate)} – ${date(rental.endDate)}`}</dd></div>
+                  <div><dt className="font-mono text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Booking amount</dt><dd className="mt-0.5 font-mono text-sm">{rental.bookingAmount == null ? "—" : `৳${rental.bookingAmount.toLocaleString()}`}</dd></div>
+                  <div><dt className="font-mono text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Payment</dt><dd className="mt-1 border border-zinc-300 px-2 py-0.5 text-xs dark:border-zinc-700">{paymentStatus}</dd></div>
+                  <div><dt className="font-mono text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Update status</dt><dd className="mt-1">
+                    <select aria-label={`Booking status for ${rental.equipmentName || "rental"}`} disabled={busy === rental._id} value={status} onChange={(event) => void updateStatus(rental, event.target.value)} className="w-full border border-stone-300 bg-[#F7F6F2] px-2.5 py-2 font-mono text-[11px] uppercase tracking-wider focus:border-zinc-950 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-amber-300">
                       {statuses.map((value) => <option value={value} key={value}>{value}</option>)}
                     </select>
                   </dd></div>
@@ -96,7 +102,7 @@ export default function AdminRentalsPage() {
             </article>
           );
         })}
-        {!loading && !rentals.length && <p className="dashboard-empty">No rental bookings found.</p>}
+        {!loading && !rentals.length && <p className="col-span-full border border-stone-200 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">No rental bookings found.</p>}
       </div>
     </div>
   );

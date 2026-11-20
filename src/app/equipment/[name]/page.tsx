@@ -6,5 +6,9 @@ export default async function EquipmentDetailsPage({
   params: Promise<{ name: string }>;
 }) {
   const { name } = await params;
-  return <EquipmentDetails name={name} />;
+  return (
+    <div className="min-h-screen bg-stone-100 text-zinc-900 dark:bg-zinc-950 dark:text-stone-100">
+      <EquipmentDetails name={name} />
+    </div>
+  );
 }

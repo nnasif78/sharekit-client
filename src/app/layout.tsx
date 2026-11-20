@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/navbar";
+import SiteFeedback from "@/components/site-feedback";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,6 +18,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ShareKit | Equipment Rental Platform",
   description: "Find, rent, and share equipment with ShareKit.",
+  icons: {
+    icon: "/sharekit-icon.png",
+    shortcut: "/sharekit-icon.png",
+    apple: "/sharekit-icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -31,6 +37,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <Navbar />
+        <SiteFeedback />
         <main className="flex-1">{children}</main>
       </body>
     </html>
