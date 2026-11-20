@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-request";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -47,7 +48,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // Fetch owner's equipment
 export async function getMyEquipment(): Promise<Equipment[]> {
-  const response = await fetch(`${API_URL}/api/my-equipment`, {
+  const response = await apiFetch(`${API_URL}/api/my-equipment`, {
     method: "GET",
     credentials: "include",
     cache: "no-store",
@@ -62,7 +63,7 @@ export async function updateEquipment(
   id: string,
   data: Partial<Omit<Equipment, "_id" | "ownerId" | "ownerEmail" | "ownerName" | "status" | "createdAt" | "updatedAt">>
 ): Promise<ApiResponse> {
-  const response = await fetch(`${API_URL}/api/equipment/${id}`, {
+  const response = await apiFetch(`${API_URL}/api/equipment/${id}`, {
     method: "PATCH",
     credentials: "include",
     headers: {
@@ -76,7 +77,7 @@ export async function updateEquipment(
 
 // Delete equipment
 export async function deleteEquipment(id: string): Promise<ApiResponse> {
-  const response = await fetch(`${API_URL}/api/equipment/${id}`, {
+  const response = await apiFetch(`${API_URL}/api/equipment/${id}`, {
     method: "DELETE",
     credentials: "include",
   });

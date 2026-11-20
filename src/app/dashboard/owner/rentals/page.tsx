@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-request";
 
 import { useEffect, useState } from "react";
 
@@ -22,7 +23,7 @@ export default function OwnerRentalsPage() {
   const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/owner/rentals`, { credentials: "include", cache: "no-store" })
+    apiFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/owner/rentals`, { credentials: "include", cache: "no-store" })
       .then(async (response) => { const result = await response.json(); if (!response.ok) throw new Error(result.message || "Could not load rentals."); return result; })
       .then((result) => { if (active) setRentals(result.data || []); })
       .catch((err) => { if (active) setError(err instanceof Error ? err.message : "Could not load rentals."); })

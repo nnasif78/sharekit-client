@@ -1,6 +1,7 @@
 
 "use client";
 
+import { apiFetch } from "@/lib/api-request";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
@@ -101,8 +102,8 @@ export default function AddEquipmentPage() {
     try {
       setLoading(true);
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/equipment`,
+      const response = await apiFetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/equipment`,
         {
           method: "POST",
           credentials: "include",

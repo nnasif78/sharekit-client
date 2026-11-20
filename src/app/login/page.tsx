@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GoogleSignIn from "@/components/google-sign-in";
 import { authClient } from "@/lib/auth-client";
+import { clearAccessToken } from "@/lib/api-request";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -34,6 +35,7 @@ export default function LoginPage() {
                 return;
             }
 
+            clearAccessToken();
             const callbackURL = new URLSearchParams(window.location.search).get("callbackURL");
             router.push(callbackURL?.startsWith("/") ? callbackURL : "/");
             router.refresh();

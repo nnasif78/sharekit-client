@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-request";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -33,7 +34,7 @@ export default function EquipmentDetailsPage({ name }: { name: string }) {
     fetch(`${API}/api/equipment/by-name/${encodeURIComponent(name)}`, { cache: "no-store" }).then(async (response) => { const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Equipment not found."); return result.data; }).then((data) => {
       if (!active) return;
       setItem(data);
-      if (isCustomer) fetch(`${API}/api/customer/favorites`, { credentials: "include", cache: "no-store" }).then((r) => r.json()).then((result) => { if (active && result.success) setFavorite((result.data || []).some((favoriteItem: { _id: string }) => favoriteItem._id === data._id)); }).catch(() => {});
+      if (isCustomer) apiFetch(`${API}/api/customer/favorites`, { credentials: "include", cache: "no-store" }).then((r) => r.json()).then((result) => { if (active && result.success) setFavorite((result.data || []).some((favoriteItem: { _id: string }) => favoriteItem._id === data._id)); }).catch(() => {});
     }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : "Could not load equipment."); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [name, isCustomer, isPending, session]);
@@ -45,7 +46,7 @@ export default function EquipmentDetailsPage({ name }: { name: string }) {
 
   const toggleFavorite = async () => {
     if (!item) return;
-    try { setSavingFavorite(true); const response = await fetch(`${API}/api/customer/favorites/${item._id}`, { method: favorite ? "DELETE" : "POST", credentials: "include" }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Could not update favorites."); setFavorite(!favorite); }
+    try { setSavingFavorite(true); const response = await apiFetch(`${API}/api/customer/favorites/${item._id}`, { method: favorite ? "DELETE" : "POST", credentials: "include" }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Could not update favorites."); setFavorite(!favorite); }
     catch (e) { setError(e instanceof Error ? e.message : "Could not update favorites."); }
     finally { setSavingFavorite(false); }
   };
@@ -57,7 +58,7 @@ export default function EquipmentDetailsPage({ name }: { name: string }) {
     if (booking.quantity > item.availableQuantity) { setBookingError("The requested quantity is not available."); return; }
     try {
       setSubmitting(true);
-      const response = await fetch(`${API}/api/customer/equipment/${item._id}/checkout`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(booking) });
+      const response = await apiFetch(`${API}/api/customer/equipment/${item._id}/checkout`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(booking) });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "Could not start payment.");
       if (!result.data?.checkoutUrl) throw new Error("Stripe did not return a checkout link.");
