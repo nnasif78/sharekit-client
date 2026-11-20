@@ -74,6 +74,7 @@ export default function AddEquipmentPage() {
         `${process.env.NEXT_PUBLIC_API_URL}/api/equipment`,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
