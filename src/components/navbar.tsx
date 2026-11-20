@@ -30,11 +30,14 @@ export default function Navbar() {
         ) : session ? (
           <>
             <span>{session.user.name}</span>
-            {(((session.user as { role?: string }).role === "owner") || ((session.user as { role?: string }).role === "admin")) && (
+            {(session.user as { role?: string }).role === "owner" && (
               <Link href="/dashboard/owner">Owner Dashboard</Link>
             )}
             {(session.user as { role?: string }).role === "admin" && (
               <Link href="/dashboard/admin/users">Admin Dashboard</Link>
+            )}
+            {(session.user as { role?: string }).role === "customer" && (
+              <Link href="/dashboard/customer/rentals">Customer Dashboard</Link>
             )}
 
             <button

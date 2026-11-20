@@ -18,7 +18,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const { data: session, isPending } = authClient.useSession();
   const role = (session?.user as { role?: string } | undefined)?.role;
-  const isOwner = role === "owner" || role === "admin";
+  const isOwner = role === "owner";
 
   useEffect(() => {
     if (!isPending && !session) router.replace(`/login?callbackURL=${encodeURIComponent(pathname)}`);

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { authClient } from "@/lib/auth-client";
 
 interface Equipment {
   _id: string;
@@ -19,6 +20,8 @@ interface Equipment {
 }
 
 export default function EquipmentPage() {
+  const { data: session } = authClient.useSession();
+  const isCustomer = (session?.user as { role?: string } | undefined)?.role === "customer";
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,6 +30,29 @@ export default function EquipmentPage() {
   const [category, setCategory] = useState("");
   const [rentalType, setRentalType] = useState("");
   const [sort, setSort] = useState("");
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [favoriteError, setFavoriteError] = useState("");
+
+  useEffect(() => {
+    if (!isCustomer) return;
+    let active = true;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/customer/favorites`, { credentials: "include", cache: "no-store" })
+      .then(async (response) => { const result = await response.json(); if (!response.ok) throw new Error(result.message || "Could not load favorites."); return result.data || []; })
+      .then((items) => { if (active) setFavorites(items.map((item: { _id: string }) => item._id)); })
+      .catch(() => { if (active) setFavorites([]); });
+    return () => { active = false; };
+  }, [isCustomer]);
+
+  const toggleFavorite = async (id: string) => {
+    const isFavorite = favorites.includes(id);
+    try {
+      setFavoriteError("");
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/customer/favorites/${id}`, { method: isFavorite ? "DELETE" : "POST", credentials: "include" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Could not update favorite.");
+      setFavorites((items) => isFavorite ? items.filter((item) => item !== id) : [...items, id]);
+    } catch (err) { setFavoriteError(err instanceof Error ? err.message : "Could not update favorite."); }
+  };
 
   useEffect(() => {
     const fetchEquipment = async () => {
@@ -147,6 +173,8 @@ export default function EquipmentPage() {
         </p>
       )}
 
+      {favoriteError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{favoriteError}</p>}
+
       {!loading && !error && equipment.length === 0 && (
         <div className="rounded-lg border p-10 text-center">
           <h2 className="text-xl font-semibold">
@@ -215,6 +243,7 @@ export default function EquipmentPage() {
                       </span>
                     </p>
                   </div>
+                  {isCustomer && <button onClick={() => void toggleFavorite(item._id)} className="mt-4 w-full rounded-lg border px-4 py-2 font-medium hover:bg-gray-50">{favorites.includes(item._id) ? "Remove from favorites" : "Add to favorites"}</button>}
                 </div>
               </article>
             ))}
