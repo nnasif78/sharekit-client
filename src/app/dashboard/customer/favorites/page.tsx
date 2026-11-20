@@ -1,20 +1,99 @@
 "use client";
-import { apiFetch } from "@/lib/api-request";
 
+import { apiFetch } from "@/lib/api-request";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-type Equipment = { _id: string; name: string; description: string; category: string; location: string; price: number; rentalType: string; availableQuantity: number; condition: string; image: string; brand?: string; model?: string };
+type Equipment = {
+  _id: string;
+  name: string;
+  description: string;
+  category: string;
+  location: string;
+  price: number;
+  rentalType: string;
+  availableQuantity: number;
+  condition: string;
+  image: string;
+  brand?: string;
+  model?: string;
+};
+
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 export default function CustomerFavoritesPage() {
   const [favorites, setFavorites] = useState<Equipment[]>([]);
   const [selected, setSelected] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-  useEffect(() => { let active = true; apiFetch(`${API}/api/customer/favorites`, { credentials: "include", cache: "no-store" }).then(async (r) => { const result = await r.json(); if (!r.ok || !result.success) throw new Error(result.message || "Could not load favorites."); return result.data || []; }).then((data) => { if (active) setFavorites(data); }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : "Could not load favorites."); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
-  const remove = async (item: Equipment) => { try { setBusy(item._id); const response = await apiFetch(`${API}/api/customer/favorites/${item._id}`, { method: "DELETE", credentials: "include" }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Could not remove favorite."); setFavorites((items) => items.filter((favorite) => favorite._id !== item._id)); if (selected?._id === item._id) setSelected(null); } catch (e) { setError(e instanceof Error ? e.message : "Could not remove favorite."); } finally { setBusy(""); } };
-  return <div><p className="text-sm font-medium text-gray-500">CUSTOMER DASHBOARD</p><h1 className="mt-1 text-3xl font-bold">Favorites</h1><p className="mt-2 text-gray-600">Equipment you have saved for later.</p>{error && <p role="alert" className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}<div className="mt-6 overflow-x-auto rounded-xl border bg-white"><table className="w-full min-w-[800px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr>{["Equipment Name", "Category", "Location", "Rental Price", "Actions"].map((h) => <th className="px-4 py-3" key={h}>{h}</th>)}</tr></thead><tbody className="divide-y">{favorites.map((item) => <tr key={item._id}><td className="px-4 py-4 font-medium">{item.name}</td><td className="px-4 py-4">{item.category}</td><td className="px-4 py-4">{item.location}</td><td className="px-4 py-4">৳{item.price.toLocaleString()} / {item.rentalType}</td><td className="px-4 py-4"><div className="flex gap-3"><button onClick={() => setSelected(item)} className="font-medium text-blue-700 hover:underline">View Details</button><button disabled={busy === item._id} onClick={() => void remove(item)} className="font-medium text-red-700 hover:underline disabled:opacity-50">{busy === item._id ? "Removing…" : "Remove Favorite"}</button></div></td></tr>)}</tbody></table>{loading ? <p className="p-10 text-center text-gray-500">Loading favorites…</p> : !favorites.length && <div className="p-10 text-center"><p className="text-gray-600">You have not saved any equipment yet.</p><Link href="/equipment" className="mt-3 inline-block font-medium text-blue-700 hover:underline">Browse equipment</Link></div>}</div>
-    {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setSelected(null); }}><section role="dialog" aria-modal="true" aria-labelledby="favorite-title" className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6"><div className="mb-4 flex justify-between"><h2 id="favorite-title" className="text-xl font-semibold">{selected.name}</h2><button aria-label="Close" onClick={() => setSelected(null)}>✕</button></div><img src={selected.image} alt={selected.name} className="h-56 w-full rounded-xl object-cover"/><p className="mt-4 text-sm text-gray-500">{selected.category} · {selected.location}</p><p className="mt-2">{selected.description}</p><p className="mt-3 text-sm">{selected.condition} · {selected.availableQuantity} available · ৳{selected.price} / {selected.rentalType}</p><button className="mt-5 rounded-lg border px-4 py-2" onClick={() => setSelected(null)}>Close</button></section></div>}
-  </div>;
+
+  useEffect(() => {
+    let active = true;
+    apiFetch(`${API}/api/customer/favorites`, { credentials: "include", cache: "no-store" })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || "Could not load favorites.");
+        return result.data || [];
+      })
+      .then((data) => { if (active) setFavorites(data); })
+      .catch((err: unknown) => { if (active) setError(err instanceof Error ? err.message : "Could not load favorites."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  const remove = async (item: Equipment) => {
+    try {
+      setBusy(item._id);
+      setError("");
+      const response = await apiFetch(`${API}/api/customer/favorites/${item._id}`, { method: "DELETE", credentials: "include" });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || "Could not remove favorite.");
+      setFavorites((items) => items.filter((favorite) => favorite._id !== item._id));
+      if (selected?._id === item._id) setSelected(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not remove favorite.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  return (
+    <div>
+      <header className="dashboard-page-heading">
+        <div><p className="dashboard-eyebrow">CUSTOMER DASHBOARD</p><h1>Favorites</h1><p>Equipment you have saved for later.</p></div>
+        <span className="dashboard-count">{favorites.length} saved</span>
+      </header>
+      {error && <p role="alert" className="dashboard-error">{error}</p>}
+      <div className="dashboard-card-grid">
+        {loading ? <p className="dashboard-empty">Loading favorites…</p> : favorites.map((item) => (
+          <article key={item._id} className="dashboard-card">
+            {item.image && <div className="dashboard-card-media"><img src={item.image} alt={item.name} /></div>}
+            <div className="dashboard-card-body">
+              <div><h2 className="dashboard-card-title">{item.name}</h2><p className="dashboard-card-copy">{item.category} · {item.location}</p></div>
+              <dl className="dashboard-card-details">
+                <div><dt>Rental price</dt><dd>৳{item.price.toLocaleString()} / {item.rentalType}</dd></div>
+                <div><dt>Available</dt><dd>{item.availableQuantity}</dd></div>
+              </dl>
+              <div className="dashboard-card-actions">
+                <button onClick={() => setSelected(item)} className="dashboard-action dashboard-action-primary">View details</button>
+                <button disabled={busy === item._id} onClick={() => void remove(item)} className="dashboard-action dashboard-action-danger">{busy === item._id ? "Removing…" : "Remove favorite"}</button>
+              </div>
+            </div>
+          </article>
+        ))}
+        {!loading && !favorites.length && <div className="dashboard-empty">You have not saved any equipment yet.<br /><Link href="/equipment" className="mt-3 inline-block font-semibold text-primary hover:underline">Browse equipment</Link></div>}
+      </div>
+      {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null); }}>
+        <section role="dialog" aria-modal="true" aria-labelledby="favorite-title" className="dashboard-modal">
+          <div className="mb-4 flex justify-between gap-4"><h2 id="favorite-title" className="text-xl font-semibold">{selected.name}</h2><button aria-label="Close" className="dashboard-action" onClick={() => setSelected(null)}>Close</button></div>
+          {selected.image && <img src={selected.image} alt={selected.name} className="h-56 w-full rounded-xl object-cover" />}
+          <p className="mt-4 text-sm text-muted-foreground">{selected.category} · {selected.location}</p>
+          <p className="mt-2">{selected.description}</p>
+          <p className="mt-3 text-sm">{selected.condition} · {selected.availableQuantity} available · ৳{selected.price.toLocaleString()} / {selected.rentalType}</p>
+          <button className="mt-5 dashboard-action" onClick={() => setSelected(null)}>Close</button>
+        </section>
+      </div>}
+    </div>
+  );
 }

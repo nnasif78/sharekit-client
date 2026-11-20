@@ -5,14 +5,37 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { authClient } from "@/lib/auth-client";
 
-const links = [["My Rentals", "/dashboard/customer/rentals"], ["Favorites", "/dashboard/customer/favorites"], ["Profile", "/dashboard/customer/profile"]] as const;
+const links = [
+  ["My Rentals", "/dashboard/customer/rentals"],
+  ["Favorites", "/dashboard/customer/favorites"],
+  ["Profile", "/dashboard/customer/profile"],
+] as const;
+
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session, isPending } = authClient.useSession();
   const role = (session?.user as { role?: string } | undefined)?.role;
-  useEffect(() => { if (!isPending && !session) router.replace(`/login?callbackURL=${encodeURIComponent(pathname)}`); }, [isPending, pathname, router, session]);
-  if (isPending || !session) return <main className="mx-auto max-w-6xl p-10 text-gray-500">Loading customer dashboard…</main>;
-  if (role !== "customer") return <main className="mx-auto max-w-3xl p-10"><h1 className="text-2xl font-semibold">Customer access required</h1><p className="mt-3 text-gray-600">This dashboard is available to customer accounts only.</p></main>;
-  return <div className="mx-auto grid max-w-7xl gap-8 px-5 py-8 lg:grid-cols-[230px_1fr] lg:px-8"><aside className="h-fit rounded-2xl border bg-white p-4"><p className="px-3 pb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Customer dashboard</p><nav className="flex gap-2 overflow-x-auto lg:flex-col">{links.map(([label, href]) => <Link key={href} href={href} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm ${pathname === href ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"}`}>{label}</Link>)}</nav></aside><section className="min-w-0">{children}</section></div>;
+
+  useEffect(() => {
+    if (!isPending && !session) router.replace(`/login?callbackURL=${encodeURIComponent(pathname)}`);
+  }, [isPending, pathname, router, session]);
+
+  if (isPending || !session) return <main className="dashboard-loading">Loading customer dashboard…</main>;
+  if (role !== "customer") return <main className="dashboard-access"><h1>Customer access required</h1><p>This dashboard is available to customer accounts only.</p></main>;
+
+  return (
+    <div className="dashboard-shell">
+      <aside className="dashboard-sidebar">
+        <p className="dashboard-sidebar-title">Customer dashboard</p>
+        <nav className="dashboard-sidebar-nav" aria-label="Customer dashboard">
+          {links.map(([label, href]) => {
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`dashboard-nav-link ${active ? "is-active" : ""}`}>{label}</Link>;
+          })}
+        </nav>
+      </aside>
+      <section className="dashboard-content">{children}</section>
+    </div>
+  );
 }

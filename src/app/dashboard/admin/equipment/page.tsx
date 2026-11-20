@@ -1,9 +1,25 @@
 "use client";
-import { apiFetch } from "@/lib/api-request";
 
+import { apiFetch } from "@/lib/api-request";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-type Equipment = { _id: string; name: string; description: string; category: string; location: string; price: number; rentalType: string; availableQuantity: number; condition: string; image: string; ownerName: string; ownerEmail: string; status: "pending" | "approved" | "rejected"; createdAt: string };
+type Equipment = {
+  _id: string;
+  name: string;
+  description: string;
+  category: string;
+  location: string;
+  price: number;
+  rentalType: string;
+  availableQuantity: number;
+  condition: string;
+  image: string;
+  ownerName: string;
+  ownerEmail: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+};
+
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export default function AdminEquipmentPage() {
@@ -14,24 +30,155 @@ export default function AdminEquipmentPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [editing, setEditing] = useState<Equipment | null>(null);
   const [form, setForm] = useState({ name: "", price: 0, availableQuantity: 0, location: "" });
+
   const load = useCallback(async () => {
-    try { setError(""); const response = await apiFetch(`${API}/api/admin/equipment`, { credentials: "include", cache: "no-store" }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Could not load equipment."); setEquipment(result.data || []); }
-    catch (err) { setError(err instanceof Error ? err.message : "Could not load equipment."); }
-    finally { setLoading(false); }
+    try {
+      const response = await apiFetch(`${API}/api/admin/equipment`, { credentials: "include", cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || "Could not load equipment.");
+      setError("");
+      setEquipment(result.data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load equipment.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
-  useEffect(() => { let active = true; apiFetch(`${API}/api/admin/equipment`, { credentials: "include", cache: "no-store" }).then(async (r) => { const data = await r.json(); if (!r.ok || !data.success) throw new Error(data.message || "Could not load equipment."); return data.data || []; }).then((data) => { if (active) setEquipment(data); }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : "Could not load equipment."); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
-  const filtered = useMemo(() => equipment.filter((item) => statusFilter === "all" || item.status === statusFilter), [equipment, statusFilter]);
+
+  useEffect(() => {
+    let active = true;
+    apiFetch(`${API}/api/admin/equipment`, { credentials: "include", cache: "no-store" })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || "Could not load equipment.");
+        return result.data || [];
+      })
+      .then((data) => { if (active) setEquipment(data); })
+      .catch((err: unknown) => { if (active) setError(err instanceof Error ? err.message : "Could not load equipment."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  const filtered = useMemo(
+    () => equipment.filter((item) => statusFilter === "all" || item.status === statusFilter),
+    [equipment, statusFilter],
+  );
+
   const updateStatus = async (item: Equipment, status: "approved" | "rejected") => {
-    try { setBusy(item._id); setError(""); const response = await apiFetch(`${API}/api/admin/equipment/${item._id}/status`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Status update failed."); await load(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Status update failed."); }
-    finally { setBusy(""); }
+    try {
+      setBusy(item._id);
+      setError("");
+      const response = await apiFetch(`${API}/api/admin/equipment/${item._id}/status`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || "Status update failed.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Status update failed.");
+    } finally {
+      setBusy("");
+    }
   };
-  const save = async () => { if (!editing) return; try { setBusy(editing._id); const response = await apiFetch(`${API}/api/admin/equipment/${editing._id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Equipment update failed."); setEditing(null); await load(); } catch (e) { setError(e instanceof Error ? e.message : "Equipment update failed."); } finally { setBusy(""); } };
-  const remove = async (item: Equipment) => { if (!window.confirm(`Delete ${item.name}? This cannot be undone.`)) return; try { setBusy(item._id); const response = await apiFetch(`${API}/api/admin/equipment/${item._id}`, { method: "DELETE", credentials: "include" }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Delete failed."); await load(); } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); } finally { setBusy(""); } };
-  return <div><div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-medium text-gray-500">ADMIN DASHBOARD</p><h1 className="mt-1 text-3xl font-bold">All Equipment</h1><p className="mt-2 text-gray-600">Review submissions and manage equipment listings.</p></div><button onClick={() => void load()} className="rounded-lg border px-4 py-2">Refresh</button></div>
-    <div className="mb-4 flex items-center gap-3"><span className="rounded-full bg-amber-100 px-3 py-1 text-sm text-amber-900">{equipment.filter((item) => item.status === "pending").length} pending</span><select aria-label="Filter equipment by status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border bg-white p-2"><option value="all">All statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div>
-    {error && <div role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error} <button onClick={() => void load()} className="ml-2 underline">Retry</button></div>}
-    <div className="overflow-x-auto rounded-xl border bg-white"><table className="w-full min-w-[1060px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr>{["Equipment", "Owner", "Category", "Rental Price", "Quantity", "Status", "Actions"].map((x) => <th key={x} className="px-4 py-3">{x}</th>)}</tr></thead><tbody className="divide-y">{filtered.map((item) => <tr key={item._id}><td className="px-4 py-4"><p className="font-medium">{item.name}</p><p className="text-gray-500">{item.location}</p></td><td className="px-4 py-4">{item.ownerName}<p className="text-gray-500">{item.ownerEmail}</p></td><td className="px-4 py-4">{item.category}</td><td className="px-4 py-4">৳{item.price.toLocaleString()} / {item.rentalType}</td><td className="px-4 py-4">{item.availableQuantity}</td><td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-xs ${item.status === "approved" ? "bg-green-100 text-green-800" : item.status === "rejected" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-900"}`}>{item.status || "pending"}</span></td><td className="px-4 py-4"><div className="flex flex-wrap gap-2">{item.status === "pending" && <><button disabled={busy === item._id} onClick={() => void updateStatus(item, "approved")} className="rounded bg-green-700 px-2.5 py-1.5 text-white disabled:opacity-50">Approve</button><button disabled={busy === item._id} onClick={() => void updateStatus(item, "rejected")} className="rounded bg-red-700 px-2.5 py-1.5 text-white disabled:opacity-50">Reject</button></>}<button onClick={() => { setEditing(item); setForm({ name: item.name, price: item.price, availableQuantity: item.availableQuantity, location: item.location }); }} className="rounded border px-2.5 py-1.5">Update</button><button disabled={busy === item._id} onClick={() => void remove(item)} className="rounded border border-red-200 px-2.5 py-1.5 text-red-700">Delete</button></div></td></tr>)}</tbody></table>{loading ? <p className="p-10 text-center text-gray-500">Loading equipment…</p> : !filtered.length && <p className="p-10 text-center text-gray-500">No equipment matches this status.</p>}</div>
-    {editing && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><section role="dialog" aria-modal="true" className="w-full max-w-lg rounded-2xl bg-white p-6"><h2 className="text-xl font-semibold">Update equipment</h2><div className="mt-4 space-y-3"><label className="block text-sm">Name<input className="mt-1 w-full rounded-lg border p-3" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}/></label><label className="block text-sm">Location<input className="mt-1 w-full rounded-lg border p-3" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}/></label><label className="block text-sm">Price<input type="number" min="1" className="mt-1 w-full rounded-lg border p-3" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}/></label><label className="block text-sm">Available quantity<input type="number" min="0" className="mt-1 w-full rounded-lg border p-3" value={form.availableQuantity} onChange={(e) => setForm({ ...form, availableQuantity: Number(e.target.value) })}/></label></div><div className="mt-5 flex justify-end gap-3"><button onClick={() => setEditing(null)} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={Boolean(busy)} onClick={() => void save()} className="rounded-lg bg-black px-4 py-2 text-white disabled:opacity-50">{busy ? "Saving…" : "Save changes"}</button></div></section></div>}
-  </div>;
+
+  const save = async () => {
+    if (!editing) return;
+    try {
+      setBusy(editing._id);
+      setError("");
+      const response = await apiFetch(`${API}/api/admin/equipment/${editing._id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || "Equipment update failed.");
+      setEditing(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Equipment update failed.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const remove = async (item: Equipment) => {
+    if (!window.confirm(`Delete ${item.name}? This cannot be undone.`)) return;
+    try {
+      setBusy(item._id);
+      setError("");
+      const response = await apiFetch(`${API}/api/admin/equipment/${item._id}`, { method: "DELETE", credentials: "include" });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || "Delete failed.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  return (
+    <div>
+      <header className="dashboard-page-heading">
+        <div><p className="dashboard-eyebrow">ADMIN DASHBOARD</p><h1>All Equipment</h1><p>Review submissions and manage equipment listings.</p></div>
+        <button onClick={() => void load()} className="dashboard-action">Refresh</button>
+      </header>
+      <div className="dashboard-toolbar">
+        <span className="dashboard-count">{equipment.filter((item) => item.status === "pending").length} pending approval</span>
+        <select aria-label="Filter equipment by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="dashboard-control">
+          <option value="all">All statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option>
+        </select>
+      </div>
+      {error && <div role="alert" className="dashboard-error">{error} <button className="dashboard-action" onClick={() => void load()}>Retry</button></div>}
+      <div className="dashboard-card-grid">
+        {loading ? <p className="dashboard-empty">Loading equipment…</p> : filtered.map((item) => (
+          <article key={item._id} className="dashboard-card">
+            {item.image && <div className="dashboard-card-media"><img src={item.image} alt={item.name} /></div>}
+            <div className="dashboard-card-body">
+              <div className="dashboard-card-topline">
+                <div><h2 className="dashboard-card-title">{item.name}</h2><p className="dashboard-card-copy">{item.category} · {item.location}</p></div>
+                <span className={`dashboard-status dashboard-status-${item.status || "pending"}`}>{item.status || "pending"}</span>
+              </div>
+              <p className="dashboard-card-copy">Listed by {item.ownerName || "Equipment owner"} · {item.ownerEmail || "—"}</p>
+              <dl className="dashboard-card-details">
+                <div><dt>Rental price</dt><dd>৳{item.price.toLocaleString()} / {item.rentalType}</dd></div>
+                <div><dt>Available</dt><dd>{item.availableQuantity}</dd></div>
+                <div><dt>Condition</dt><dd>{item.condition || "—"}</dd></div>
+                <div><dt>Submitted</dt><dd>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "—"}</dd></div>
+              </dl>
+              <div className="dashboard-card-actions">
+                {item.status === "pending" && <>
+                  <button disabled={busy === item._id} onClick={() => void updateStatus(item, "approved")} className="dashboard-action dashboard-action-primary">Approve</button>
+                  <button disabled={busy === item._id} onClick={() => void updateStatus(item, "rejected")} className="dashboard-action dashboard-action-danger">Reject</button>
+                </>}
+                <button onClick={() => { setEditing(item); setForm({ name: item.name, price: item.price, availableQuantity: item.availableQuantity, location: item.location }); }} className="dashboard-action">Update</button>
+                <button disabled={busy === item._id} onClick={() => void remove(item)} className="dashboard-action dashboard-action-danger">Delete</button>
+              </div>
+            </div>
+          </article>
+        ))}
+        {!loading && !filtered.length && <p className="dashboard-empty">No equipment matches this status.</p>}
+      </div>
+      {editing && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+        <section role="dialog" aria-modal="true" aria-labelledby="admin-equipment-dialog-title" className="dashboard-modal">
+          <h2 id="admin-equipment-dialog-title" className="text-xl font-semibold">Update equipment</h2>
+          <div className="mt-4 space-y-3">
+            <label className="block">Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+            <label className="block">Location<input value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} /></label>
+            <label className="block">Price<input type="number" min="1" value={form.price} onChange={(event) => setForm({ ...form, price: Number(event.target.value) })} /></label>
+            <label className="block">Available quantity<input type="number" min="0" value={form.availableQuantity} onChange={(event) => setForm({ ...form, availableQuantity: Number(event.target.value) })} /></label>
+          </div>
+          <div className="mt-5 flex justify-end gap-3">
+            <button onClick={() => setEditing(null)} className="dashboard-action">Cancel</button>
+            <button disabled={Boolean(busy)} onClick={() => void save()} className="dashboard-action dashboard-action-primary">{busy ? "Saving…" : "Save changes"}</button>
+          </div>
+        </section>
+      </div>}
+    </div>
+  );
 }

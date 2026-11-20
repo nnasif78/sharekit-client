@@ -1,15 +1,73 @@
 "use client";
-import { apiFetch } from "@/lib/api-request";
 
+import { apiFetch } from "@/lib/api-request";
 import { useEffect, useState } from "react";
 
-type Rental = { _id: string; equipmentName: string; startDate?: string; endDate?: string; bookingDate?: string; totalAmount?: number; paymentStatus?: string; status?: string };
+type Rental = {
+  _id: string;
+  equipmentName: string;
+  startDate?: string;
+  endDate?: string;
+  bookingDate?: string;
+  totalAmount?: number;
+  paymentStatus?: string;
+  status?: string;
+};
+
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const date = (value?: string) => value ? new Date(value).toLocaleDateString() : "—";
+
 export default function CustomerRentalsPage() {
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  useEffect(() => { let active = true; apiFetch(`${API}/api/customer/rentals`, { credentials: "include", cache: "no-store" }).then(async (r) => { const result = await r.json(); if (!r.ok || !result.success) throw new Error(result.message || "Could not load rentals."); return result.data || []; }).then((data) => { if (active) setRentals(data); }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : "Could not load rentals."); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
-  return <div><p className="text-sm font-medium text-gray-500">CUSTOMER DASHBOARD</p><h1 className="mt-1 text-3xl font-bold">My Rentals</h1><p className="mt-2 text-gray-600">Track your equipment bookings and payment status.</p>{error && <p role="alert" className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}<div className="mt-6 overflow-x-auto rounded-xl border bg-white"><table className="w-full min-w-[1000px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr>{["Equipment Name", "Rental Start Date", "Rental End Date", "Booking Date", "Total Amount", "Payment Status", "Booking Status"].map((h) => <th className="px-4 py-3" key={h}>{h}</th>)}</tr></thead><tbody className="divide-y">{rentals.map((r) => <tr key={r._id}><td className="px-4 py-4 font-medium">{r.equipmentName}</td><td className="px-4 py-4">{date(r.startDate)}</td><td className="px-4 py-4">{date(r.endDate)}</td><td className="px-4 py-4">{date(r.bookingDate)}</td><td className="px-4 py-4">{r.totalAmount == null ? "—" : `৳${r.totalAmount.toLocaleString()}`}</td><td className="px-4 py-4">{r.paymentStatus || "Pending"}</td><td className="px-4 py-4">{r.status || "Pending"}</td></tr>)}</tbody></table>{loading ? <p className="p-10 text-center text-gray-500">Loading rentals…</p> : !rentals.length && <p className="p-10 text-center text-gray-500">You have no rental bookings yet.</p>}</div></div>;
+
+  useEffect(() => {
+    let active = true;
+    apiFetch(`${API}/api/customer/rentals`, { credentials: "include", cache: "no-store" })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || "Could not load rentals.");
+        return result.data || [];
+      })
+      .then((data) => { if (active) setRentals(data); })
+      .catch((err: unknown) => { if (active) setError(err instanceof Error ? err.message : "Could not load rentals."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  return (
+    <div>
+      <header className="dashboard-page-heading">
+        <div><p className="dashboard-eyebrow">CUSTOMER DASHBOARD</p><h1>My Rentals</h1><p>Track your equipment bookings and payment status.</p></div>
+        <span className="dashboard-count">{rentals.length} bookings</span>
+      </header>
+      {error && <p role="alert" className="dashboard-error">{error}</p>}
+      <div className="dashboard-card-grid">
+        {loading ? <p className="dashboard-empty">Loading rentals…</p> : rentals.map((rental) => {
+          const status = (rental.status || "pending").toLowerCase();
+          const payment = rental.paymentStatus || "Pending";
+          return (
+            <article key={rental._id} className="dashboard-card">
+              <div className="dashboard-card-body">
+                <div className="dashboard-card-topline">
+                  <div><p className="dashboard-eyebrow">YOUR BOOKING</p><h2 className="dashboard-card-title mt-2">{rental.equipmentName}</h2></div>
+                  <span className={`dashboard-status dashboard-status-${status}`}>{status}</span>
+                </div>
+                <dl className="dashboard-card-details">
+                  <div><dt>Rental starts</dt><dd>{date(rental.startDate)}</dd></div>
+                  <div><dt>Rental ends</dt><dd>{date(rental.endDate)}</dd></div>
+                  <div><dt>Booked on</dt><dd>{date(rental.bookingDate)}</dd></div>
+                  <div><dt>Total amount</dt><dd>{rental.totalAmount == null ? "—" : `৳${rental.totalAmount.toLocaleString()}`}</dd></div>
+                  <div><dt>Payment status</dt><dd><span className={`dashboard-status dashboard-status-${payment.toLowerCase()}`}>{payment}</span></dd></div>
+                  <div><dt>Booking status</dt><dd><span className={`dashboard-status dashboard-status-${status}`}>{status}</span></dd></div>
+                </dl>
+              </div>
+            </article>
+          );
+        })}
+        {!loading && !rentals.length && <p className="dashboard-empty">You have no rental bookings yet.</p>}
+      </div>
+    </div>
+  );
 }
