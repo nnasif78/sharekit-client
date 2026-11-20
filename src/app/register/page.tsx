@@ -14,6 +14,7 @@ export default function RegisterPage() {
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
+    const [image, setImage] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -42,6 +43,7 @@ export default function RegisterPage() {
             const { error } = await authClient.signUp.email({
                 name,
                 email,
+                image: image.trim() || undefined,
                 password,
             });
 
@@ -87,6 +89,15 @@ export default function RegisterPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="w-full border border-stone-300 bg-white px-4 py-3 text-zinc-900 placeholder:text-zinc-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-stone-100 dark:placeholder:text-zinc-400"
+                />
+
+                <input
+                    type="url"
+                    placeholder="Profile photo URL (optional)"
+                    value={image}
+                    onChange={(e) => setImage(e.target.value)}
+                    aria-label="Profile photo URL"
                     className="w-full border border-stone-300 bg-white px-4 py-3 text-zinc-900 placeholder:text-zinc-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-stone-100 dark:placeholder:text-zinc-400"
                 />
 

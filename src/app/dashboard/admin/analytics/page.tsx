@@ -8,7 +8,7 @@ type Analytics = {
   users: number;
   equipment: number;
   bookings: number;
-  approvals: number;
+  pendingApprovals: number;
   completedRentals: number;
   revenue: number;
   monthlyBookings: { month: string; bookings: number }[];
@@ -39,7 +39,7 @@ export default function AdminAnalyticsPage() {
     ["Registered users", analytics?.users, ""],
     ["Equipment listings", analytics?.equipment, ""],
     ["Bookings", analytics?.bookings, ""],
-    ["Approved listings", analytics?.approvals, ""],
+    ["Pending approvals", analytics?.pendingApprovals, ""],
     ["Completed rentals", analytics?.completedRentals, ""],
     ["Revenue", analytics?.revenue, "৳"],
   ] as const;

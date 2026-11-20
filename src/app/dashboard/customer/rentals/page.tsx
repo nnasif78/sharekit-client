@@ -17,11 +17,13 @@ type Rental = {
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const date = (value?: string) => value ? new Date(value).toLocaleDateString() : "—";
+const PAGE_SIZE = 9;
 
 export default function CustomerRentalsPage() {
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let active = true;
@@ -37,6 +39,9 @@ export default function CustomerRentalsPage() {
     return () => { active = false; };
   }, []);
 
+  const totalPages = Math.ceil(rentals.length / PAGE_SIZE);
+  const visibleRentals = rentals.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="space-y-7 text-zinc-950 dark:text-zinc-100">
       <header className="flex flex-col justify-between gap-4 border-b border-stone-200 pb-6 sm:flex-row sm:items-end dark:border-zinc-800">
@@ -45,7 +50,7 @@ export default function CustomerRentalsPage() {
       </header>
       {error && <p role="alert" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/70 dark:bg-red-950/50 dark:text-red-300">{error}</p>}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading rentals…</p> : rentals.map((rental) => {
+        {loading ? <p className="col-span-full border border-stone-200 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">Loading rentals…</p> : visibleRentals.map((rental) => {
           const status = (rental.status || "pending").toLowerCase();
           const payment = rental.paymentStatus || "Pending";
           return (
@@ -69,6 +74,32 @@ export default function CustomerRentalsPage() {
         })}
         {!loading && !rentals.length && <p className="col-span-full border border-stone-200 bg-white py-16 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">You have no rental bookings yet.</p>}
       </div>
+      {!loading && totalPages > 1 && (
+        <nav
+          aria-label="Rental history pagination"
+          className="flex items-center justify-between border-t border-stone-200 pt-4 dark:border-zinc-800"
+        >
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            disabled={page === 1}
+            className="border border-stone-300 px-3 py-2 font-mono text-xs uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700"
+          >
+            Previous
+          </button>
+          <span aria-live="polite" className="font-mono text-xs uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+            disabled={page === totalPages}
+            className="border border-stone-300 px-3 py-2 font-mono text-xs uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700"
+          >
+            Next
+          </button>
+        </nav>
+      )}
     </div>
   );
 }

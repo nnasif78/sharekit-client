@@ -6,9 +6,10 @@ import {
   ArrowUpRight,
   Camera,
   Drill,
-  Moon,
+  Monitor,
+  PartyPopper,
   Search,
-  Sun,
+  Sprout,
   Truck,
   Wrench,
 } from "lucide-react";
@@ -67,26 +68,60 @@ const categories = [
     image:
       "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
   },
+  {
+    title: "Agriculture",
+    subtitle: "Field tools, irrigation, harvest gear",
+    icon: Sprout,
+    query: "Agriculture Equipment",
+    image:
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Electronics",
+    subtitle: "Computers, displays, production equipment",
+    icon: Monitor,
+    query: "Electronics",
+    image:
+      "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Event Equipment",
+    subtitle: "Audio, lighting, and event essentials",
+    icon: PartyPopper,
+    query: "Event Equipment",
+    image:
+      "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80",
+  },
 ];
 
 const reviews = [
   {
+    rating: 5,
     quote:
       "Picked up a rotary hammer two blocks away for a Saturday renovation. Saved me thousands on a tool I only needed for forty-eight hours.",
     name: "Maya R.",
     detail: "Rented Rotary Hammer · Gulshan",
   },
   {
+    rating: 5,
     quote:
       "My camera kit covered its own maintenance in two weekend shoots. Hand-offs are clear and renters treat the optics like their own.",
     name: "Ethan L.",
     detail: "Listed Cinema Kit · Dhanmondi",
   },
   {
+    rating: 5,
     quote:
       "Clean, calibrated gear ready right on schedule. It feels less like a rental counter and more like borrowing from a careful colleague.",
     name: "Samira K.",
     detail: "Rented Mirrorless Kit · Banani",
+  },
+  {
+    rating: 5,
+    quote:
+      "A compact PA system made our neighborhood workshop easier to run. Pickup and return were clear, and the kit worked as described.",
+    name: "Tariq M.",
+    detail: "Rented PA System · Uttara",
   },
 ];
 
@@ -326,16 +361,6 @@ export default function HomeExperience() {
     window.addEventListener("sharekit-theme-change", syncTheme);
     return () => window.removeEventListener("sharekit-theme-change", syncTheme);
   }, []);
-
-  const toggleTheme = () => {
-    setTheme((prev) => {
-      const next: ThemeMode = prev === "dark" ? "light" : "dark";
-      window.localStorage.setItem("sharekit-theme", next);
-      document.documentElement.classList.toggle("dark", next === "dark");
-      document.documentElement.setAttribute("data-theme", next);
-      return next;
-    });
-  };
 
   useEffect(() => {
     let active = true;
@@ -607,60 +632,68 @@ export default function HomeExperience() {
                 dark ? "text-zinc-500" : "text-zinc-400"
               }`}
             >
-              01 — 04
+              01 — 07
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-            {categories.map(({ title, subtitle, icon: Icon, query, image }) => (
-              <Link
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {categories.map(({ title, subtitle, icon: Icon, query, image }, index) => (
+              <motion.div
                 key={title}
-                href={`/equipment?category=${encodeURIComponent(query)}`}
-                className={`group flex flex-col justify-between overflow-hidden border transition-colors ${
-                  dark
-                    ? "border-zinc-800 bg-zinc-900/60 hover:border-zinc-500"
-                    : "border-stone-200 bg-white hover:border-zinc-950"
-                }`}
+                className={index === 6 ? "xl:col-start-2" : ""}
+                initial={{ opacity: 0, y: 8 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
               >
-                <div>
-                  <div className="relative aspect-[4/3] w-full overflow-hidden">
-                    <Image
-                      src={image}
-                      alt={title}
-                      width={640}
-                      height={480}
-                      unoptimized
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="p-5">
-                    <div className="mb-3 flex items-center justify-between">
-                      <Icon
-                        size={19}
-                        strokeWidth={1.6}
-                        className={dark ? "text-amber-300" : "text-zinc-800"}
-                      />
-                      <ArrowUpRight
-                        size={17}
-                        strokeWidth={1.6}
-                        className={`${
-                          dark ? "text-zinc-400" : "text-zinc-500"
-                        }`}
+                <Link
+                  href={`/equipment?category=${encodeURIComponent(query)}`}
+                  className={`group flex h-full flex-col justify-between overflow-hidden border transition-colors ${
+                    dark
+                      ? "border-zinc-800 bg-zinc-900/60 hover:border-zinc-500"
+                      : "border-stone-200 bg-white hover:border-zinc-950"
+                  }`}
+                >
+                  <div>
+                    <div className="relative aspect-[4/3] w-full overflow-hidden">
+                      <Image
+                        src={image}
+                        alt={title}
+                        width={640}
+                        height={480}
+                        unoptimized
+                        className="h-full w-full object-cover"
                       />
                     </div>
-                    <h3 className="text-lg font-medium tracking-tight">
-                      {title}
-                    </h3>
-                    <p
-                      className={`mt-1 text-sm ${
-                        dark ? "text-zinc-400" : "text-zinc-500"
-                      }`}
-                    >
-                      {subtitle}
-                    </p>
+                    <div className="p-5">
+                      <div className="mb-3 flex items-center justify-between">
+                        <Icon
+                          size={19}
+                          strokeWidth={1.6}
+                          className={dark ? "text-amber-300" : "text-zinc-800"}
+                        />
+                        <ArrowUpRight
+                          size={17}
+                          strokeWidth={1.6}
+                          className={`${
+                            dark ? "text-zinc-400" : "text-zinc-500"
+                          }`}
+                        />
+                      </div>
+                      <h3 className="text-lg font-medium tracking-tight">
+                        {title}
+                      </h3>
+                      <p
+                        className={`mt-1 text-sm ${
+                          dark ? "text-zinc-400" : "text-zinc-500"
+                        }`}
+                      >
+                        {subtitle}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -714,7 +747,16 @@ export default function HomeExperience() {
           ) : equipment.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {equipment.slice(0, 6).map((item) => (
-                <EquipmentCard key={item._id} item={item} dark={dark} />
+                <motion.div
+                  key={item._id}
+                  initial={{ opacity: 0, y: 8 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.1 }}
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                  className="h-full"
+                >
+                  <EquipmentCard item={item} dark={dark} />
+                </motion.div>
               ))}
             </div>
           ) : (
@@ -945,7 +987,7 @@ export default function HomeExperience() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
             {reviews.map((review) => (
               <figure
                 key={review.name}
@@ -955,6 +997,14 @@ export default function HomeExperience() {
                     : "border-stone-200 bg-white"
                 }`}
               >
+                <div
+                  aria-label={`${review.rating} out of 5 stars`}
+                  className={`mb-5 font-mono text-xs uppercase tracking-wider ${
+                    dark ? "text-amber-300" : "text-amber-700"
+                  }`}
+                >
+                  Rating {review.rating.toFixed(1)} / 5
+                </div>
                 <blockquote
                   className={`text-base leading-relaxed ${
                     dark ? "text-zinc-200" : "text-zinc-800"
