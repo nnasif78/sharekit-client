@@ -327,7 +327,6 @@ export default function HomeExperience() {
   const [search, setSearch] = useState("");
   const [theme, setTheme] = useState<ThemeMode>("light");
 
-  // Initialize theme from localStorage or system preference and sync <html> class
   useEffect(() => {
     const saved =
       typeof window !== "undefined"
@@ -345,8 +344,6 @@ export default function HomeExperience() {
           ? "dark"
           : "light";
 
-    // Theme preferences are browser-only and must be reconciled after hydration.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncs the rendered theme with persisted preferences.
     setTheme(initial);
     document.documentElement.classList.toggle("dark", initial === "dark");
     document.documentElement.setAttribute("data-theme", initial);
@@ -401,7 +398,7 @@ export default function HomeExperience() {
       }`}
     >
 
-      {/* HERO WITH PHOTOGRAPHIC SHOWCASE */}
+
       <section
         className={`border-b ${
           dark ? "border-zinc-800/90" : "border-stone-200/90"
@@ -438,7 +435,7 @@ export default function HomeExperience() {
                 Pick it up, finish the job, and return it.
               </p>
 
-              {/* Search Bar */}
+
               <form
                 onSubmit={submitSearch}
                 className={`mt-8 flex flex-col border sm:flex-row ${
@@ -506,7 +503,7 @@ export default function HomeExperience() {
               </div>
             </motion.div>
 
-            {/* Hero Visual */}
+
             <motion.div
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
@@ -616,7 +613,7 @@ export default function HomeExperience() {
         </div>
       </section>
 
-      {/* CATEGORIES WITH REAL PHOTOGRAPHY */}
+
       <section
         className={`border-b ${
           dark ? "border-zinc-800/90" : "border-stone-200/90"
@@ -699,7 +696,7 @@ export default function HomeExperience() {
         </div>
       </section>
 
-      {/* FEATURED EQUIPMENT */}
+
       <section
         id="featured"
         className={`border-b ${
@@ -796,7 +793,7 @@ export default function HomeExperience() {
         </div>
       </section>
 
-      {/* BENEFITS */}
+
       <section
         className={`border-b ${
           dark
@@ -885,7 +882,7 @@ export default function HomeExperience() {
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
+
       <section
         id="how-it-works"
         className={`border-b ${
@@ -967,7 +964,7 @@ export default function HomeExperience() {
         </div>
       </section>
 
-      {/* REVIEWS */}
+
       <section
         className={`border-b ${
           dark ? "border-zinc-800/90" : "border-stone-200/90"
@@ -1032,7 +1029,7 @@ export default function HomeExperience() {
         </div>
       </section>
 
-      {/* FINAL CTA */}
+
       <section className={dark ? "bg-zinc-900" : "bg-zinc-950 text-white"}>
         <div className="mx-auto max-w-7xl px-6 py-20 md:px-10 md:py-24">
           <div className="flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-end">
@@ -1065,7 +1062,7 @@ export default function HomeExperience() {
         </div>
       </section>
 
-      {/* FOOTER */}
+
       <footer
         className={`border-t ${
           dark

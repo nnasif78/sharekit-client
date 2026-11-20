@@ -46,7 +46,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return result as T;
 }
 
-// Fetch owner's equipment
 export async function getMyEquipment(): Promise<Equipment[]> {
   const response = await apiFetch(`${API_URL}/api/my-equipment`, {
     method: "GET",
@@ -58,7 +57,6 @@ export async function getMyEquipment(): Promise<Equipment[]> {
   return result.data;
 }
 
-// Update equipment
 export async function updateEquipment(
   id: string,
   data: Partial<Omit<Equipment, "_id" | "ownerId" | "ownerEmail" | "ownerName" | "status" | "createdAt" | "updatedAt">>
@@ -75,7 +73,6 @@ export async function updateEquipment(
   return handleResponse<ApiResponse>(response);
 }
 
-// Delete equipment
 export async function deleteEquipment(id: string): Promise<ApiResponse> {
   const response = await apiFetch(`${API_URL}/api/equipment/${id}`, {
     method: "DELETE",

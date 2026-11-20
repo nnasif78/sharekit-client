@@ -162,7 +162,7 @@ export default function AdminEquipmentPage() {
 
   return (
     <div className="space-y-8 text-zinc-950 dark:text-zinc-100">
-      {/* Page Header */}
+
       <header className="flex flex-col justify-between gap-4 border-b border-stone-200/90 pb-6 sm:flex-row sm:items-end dark:border-zinc-800/90">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
@@ -184,7 +184,7 @@ export default function AdminEquipmentPage() {
         </button>
       </header>
 
-      {/* Toolbar */}
+
       <DashboardCollectionToolbar
         search={collection.search}
         onSearchChange={collection.setSearch}
@@ -216,7 +216,7 @@ export default function AdminEquipmentPage() {
         </select>
       </DashboardCollectionToolbar>
 
-      {/* Error Banner */}
+
       {error && (
         <div
           role="alert"
@@ -232,7 +232,7 @@ export default function AdminEquipmentPage() {
         </div>
       )}
 
-      {/* Equipment Grid */}
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         {loading ? (
           <p className="col-span-full border border-stone-200/90 bg-white py-16 text-center font-mono text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
@@ -325,7 +325,7 @@ export default function AdminEquipmentPage() {
                   </div>
                 </div>
 
-                {/* Card Actions */}
+
                 <div className="flex flex-wrap items-center gap-2 border-t border-stone-200/80 bg-[#F7F6F2]/70 px-5 py-3.5 dark:border-zinc-800 dark:bg-zinc-950/60">
                   {item.status === "pending" && (
                     <>
@@ -388,7 +388,7 @@ export default function AdminEquipmentPage() {
         onPageChange={collection.setPage}
       />}
 
-      {/* Edit Modal */}
+
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
           <section

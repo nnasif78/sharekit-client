@@ -159,7 +159,7 @@ export default function Navbar() {
         className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-6 md:px-10"
         aria-label="Main navigation"
       >
-        {/* Brand */}
+
         <Link
           href="/"
           aria-label="ShareKit home"
@@ -181,7 +181,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Desktop Primary Links */}
+
         <div className="hidden items-center gap-7 md:flex">
           {navLinks.map((item) => {
             const active =
@@ -214,7 +214,7 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Right Actions */}
+
         <div className="flex items-center gap-2.5 sm:gap-3">
           <ThemeToggle />
 
@@ -377,7 +377,7 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* Mobile Drawer Trigger */}
+
           <button
             type="button"
             aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
@@ -390,7 +390,7 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Menu Drawer */}
+
       {mobileOpen && (
         <div className="border-t border-stone-200 bg-[#F7F6F2] px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950 md:hidden">
           <div className="flex flex-col space-y-1">
