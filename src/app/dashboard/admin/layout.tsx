@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { authClient } from "@/lib/auth-client";
 
 const links = [
+  ["Overview", "/dashboard/admin/analytics"],
   ["All Users", "/dashboard/admin/users"],
   ["All Equipment", "/dashboard/admin/equipment"],
   ["All Rentals", "/dashboard/admin/rentals"],
