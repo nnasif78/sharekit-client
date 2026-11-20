@@ -20,6 +20,11 @@ interface Equipment {
   model?: string;
 }
 
+const equipmentDetailsUrl = (item: Equipment) => {
+  const slug = item.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "equipment";
+  return `/equipment/${encodeURIComponent(slug)}`;
+};
+
 export default function EquipmentPage() {
   const { data: session } = authClient.useSession();
   const isCustomer = (session?.user as { role?: string } | undefined)?.role === "customer";
@@ -209,8 +214,9 @@ export default function EquipmentPage() {
             {equipment.map((item) => (
               <article
                 key={item._id}
-                className="overflow-hidden rounded-xl border"
+                className="group relative overflow-hidden rounded-xl border transition-shadow hover:shadow-lg"
               >
+                <Link href={equipmentDetailsUrl(item)} aria-label={`View details for ${item.name}`} className="absolute inset-0 z-10 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"><span className="sr-only">Open {item.name} details</span></Link>
                 <img
                   src={item.image}
                   alt={item.name}
@@ -255,8 +261,8 @@ export default function EquipmentPage() {
                       </span>
                     </p>
                   </div>
-                  <Link href={`/equipment/${item.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "equipment"}-${item._id}`} className="mt-4 block w-full rounded-lg bg-black px-4 py-2.5 text-center font-medium text-white hover:bg-gray-800">View Details</Link>
-                  {isCustomer && <button onClick={() => void toggleFavorite(item._id)} className="mt-4 w-full rounded-lg border px-4 py-2 font-medium hover:bg-gray-50">{favorites.includes(item._id) ? "Remove from favorites" : "Add to favorites"}</button>}
+                  <Link href={equipmentDetailsUrl(item)} className="relative z-20 mt-4 block w-full rounded-lg bg-black px-4 py-2.5 text-center font-medium text-white hover:bg-gray-800">View Details</Link>
+                  {isCustomer && <button onClick={() => void toggleFavorite(item._id)} className="relative z-20 mt-4 w-full rounded-lg border bg-white px-4 py-2 font-medium hover:bg-gray-50">{favorites.includes(item._id) ? "Remove from favorites" : "Add to favorites"}</button>}
                 </div>
               </article>
             ))}
