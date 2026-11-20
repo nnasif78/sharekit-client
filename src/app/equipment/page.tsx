@@ -255,7 +255,7 @@ export default function EquipmentPage() {
                       </span>
                     </p>
                   </div>
-                  <Link href={`/equipment/${item._id}`} className="mt-4 block w-full rounded-lg bg-black px-4 py-2.5 text-center font-medium text-white hover:bg-gray-800">View Details</Link>
+                  <Link href={`/equipment/${item.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "equipment"}-${item._id}`} className="mt-4 block w-full rounded-lg bg-black px-4 py-2.5 text-center font-medium text-white hover:bg-gray-800">View Details</Link>
                   {isCustomer && <button onClick={() => void toggleFavorite(item._id)} className="mt-4 w-full rounded-lg border px-4 py-2 font-medium hover:bg-gray-50">{favorites.includes(item._id) ? "Remove from favorites" : "Add to favorites"}</button>}
                 </div>
               </article>

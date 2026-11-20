@@ -10,7 +10,8 @@ const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const daysBetween = (start: string, end: string) => Math.floor((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000) + 1;
 
 export default function EquipmentDetailsPage() {
-  const { id } = useParams<{ id: string }>();
+  const { name } = useParams<{ name: string }>();
+  const id = name.match(/-([a-f\d]{24})$/i)?.[1] || (/^[a-f\d]{24}$/i.test(name) ? name : "");
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
   const isCustomer = (session?.user as { role?: string } | undefined)?.role === "customer";
@@ -25,8 +26,8 @@ export default function EquipmentDetailsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!isPending && !session) router.replace(`/login?callbackURL=${encodeURIComponent(`/equipment/${id}`)}`);
-  }, [id, isPending, router, session]);
+    if (id && !isPending && !session) router.replace(`/login?callbackURL=${encodeURIComponent(`/equipment/${name}`)}`);
+  }, [id, isPending, name, router, session]);
 
   useEffect(() => {
     if (isPending || !session || !id) return;
@@ -63,6 +64,7 @@ export default function EquipmentDetailsPage() {
     } catch (e) { setBookingError(e instanceof Error ? e.message : "Could not start payment."); setSubmitting(false); }
   };
 
+  if (!id) return <main className="mx-auto max-w-3xl p-10 text-gray-600">Equipment was not found.</main>;
   if (isPending || loading) return <main className="mx-auto max-w-6xl p-10 text-gray-500">Loading equipment details…</main>;
   if (!session) return <main className="mx-auto max-w-3xl p-10 text-gray-600">Redirecting to sign in…</main>;
   if (error && !item) return <main className="mx-auto max-w-3xl p-10"><p role="alert" className="rounded-lg bg-red-50 p-4 text-red-700">{error}</p><Link href="/equipment" className="mt-4 inline-block text-blue-700 hover:underline">Back to equipment</Link></main>;
