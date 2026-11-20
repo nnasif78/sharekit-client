@@ -1,282 +1,36 @@
-
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-interface Equipment {
-  _id: string;
-  name: string;
-  description: string;
-  category: string;
-  location: string;
-  price: number;
-  rentalType: string;
-  availableQuantity: number;
-  condition: string;
-  image: string;
-  ownerName: string;
-  ownerEmail: string;
-  status: "pending" | "approved" | "rejected";
-  createdAt: string;
-}
+type Equipment = { _id: string; name: string; description: string; category: string; location: string; price: number; rentalType: string; availableQuantity: number; condition: string; image: string; ownerName: string; ownerEmail: string; status: "pending" | "approved" | "rejected"; createdAt: string };
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export default function AdminEquipmentPage() {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [processingId, setProcessingId] = useState("");
-
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-  const fetchEquipment = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const response = await fetch(
-        `${API_URL}/api/admin/equipment`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.message || "Failed to fetch equipment"
-        );
-      }
-
-      setEquipment(result.data || []);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [API_URL]);
-
-  useEffect(() => {
-    fetchEquipment();
-  }, [fetchEquipment]);
-
-  const updateStatus = async (
-    id: string,
-    status: "approved" | "rejected"
-  ) => {
-    try {
-      setProcessingId(id);
-      setError("");
-      setMessage("");
-
-      const response = await fetch(
-        `${API_URL}/api/admin/equipment/${id}/status`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.message || "Failed to update equipment"
-        );
-      }
-
-      setMessage(
-        `Equipment ${status} successfully!`
-      );
-
-      await fetchEquipment();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong"
-      );
-    } finally {
-      setProcessingId("");
-    }
+  const [busy, setBusy] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [editing, setEditing] = useState<Equipment | null>(null);
+  const [form, setForm] = useState({ name: "", price: 0, availableQuantity: 0, location: "" });
+  const load = useCallback(async () => {
+    try { setError(""); const response = await fetch(`${API}/api/admin/equipment`, { credentials: "include", cache: "no-store" }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Could not load equipment."); setEquipment(result.data || []); }
+    catch (err) { setError(err instanceof Error ? err.message : "Could not load equipment."); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { let active = true; fetch(`${API}/api/admin/equipment`, { credentials: "include", cache: "no-store" }).then(async (r) => { const data = await r.json(); if (!r.ok || !data.success) throw new Error(data.message || "Could not load equipment."); return data.data || []; }).then((data) => { if (active) setEquipment(data); }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : "Could not load equipment."); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
+  const filtered = useMemo(() => equipment.filter((item) => statusFilter === "all" || item.status === statusFilter), [equipment, statusFilter]);
+  const updateStatus = async (item: Equipment, status: "approved" | "rejected") => {
+    try { setBusy(item._id); setError(""); const response = await fetch(`${API}/api/admin/equipment/${item._id}/status`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Status update failed."); await load(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Status update failed."); }
+    finally { setBusy(""); }
   };
-
-  const pendingCount = equipment.filter(
-    (item) => item.status === "pending"
-  ).length;
-
-  if (loading) {
-    return (
-      <main className="p-8">
-        Loading equipment...
-      </main>
-    );
-  }
-
-  return (
-    <main className="mx-auto max-w-7xl p-6">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">
-            Equipment Management
-          </h1>
-
-          <p className="mt-2 text-gray-500">
-            Review and manage equipment submissions.
-          </p>
-        </div>
-
-        <button
-          onClick={fetchEquipment}
-          className="rounded-lg border px-4 py-2 hover:bg-gray-100"
-        >
-          Refresh
-        </button>
-      </div>
-
-      <div className="mb-6 rounded-lg border p-5">
-        <p className="text-gray-500">
-          Pending Approval
-        </p>
-
-        <p className="mt-2 text-3xl font-bold">
-          {pendingCount}
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-5 rounded-lg bg-red-50 p-4 text-red-700">
-          {error}
-        </div>
-      )}
-
-      {message && (
-        <div className="mb-5 rounded-lg bg-green-50 p-4 text-green-700">
-          {message}
-        </div>
-      )}
-
-      {equipment.length === 0 ? (
-        <div className="rounded-lg border p-10 text-center">
-          No equipment submissions found.
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {equipment.map((item) => (
-            <div
-              key={item._id}
-              className="rounded-xl border p-5"
-            >
-              <div className="grid gap-5 md:grid-cols-[180px_1fr]">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="h-44 w-full rounded-lg object-cover"
-                />
-
-                <div>
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-xl font-semibold">
-                      {item.name}
-                    </h2>
-
-                    <span
-                      className={`rounded-full px-3 py-1 text-sm font-medium ${
-                        item.status === "pending"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : item.status === "approved"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {item.status}
-                    </span>
-                  </div>
-
-                  <p className="mb-3 text-gray-600">
-                    {item.description}
-                  </p>
-
-                  <div className="grid gap-2 text-sm sm:grid-cols-2">
-                    <p>
-                      <strong>Category:</strong>{" "}
-                      {item.category}
-                    </p>
-
-                    <p>
-                      <strong>Location:</strong>{" "}
-                      {item.location}
-                    </p>
-
-                    <p>
-                      <strong>Price:</strong>{" "}
-                      ৳{item.price} / {item.rentalType}
-                    </p>
-
-                    <p>
-                      <strong>Quantity:</strong>{" "}
-                      {item.availableQuantity}
-                    </p>
-
-                    <p>
-                      <strong>Condition:</strong>{" "}
-                      {item.condition}
-                    </p>
-
-                    <p>
-                      <strong>Owner:</strong>{" "}
-                      {item.ownerName}
-                    </p>
-
-                    <p>
-                      <strong>Owner Email:</strong>{" "}
-                      {item.ownerEmail}
-                    </p>
-                  </div>
-
-                  {item.status === "pending" && (
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <button
-                        onClick={() =>
-                          updateStatus(item._id, "approved")
-                        }
-                        disabled={processingId === item._id}
-                        className="rounded-lg bg-green-600 px-5 py-2 font-medium text-white hover:bg-green-700 disabled:opacity-50"
-                      >
-                        {processingId === item._id
-                          ? "Processing..."
-                          : "Approve"}
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          updateStatus(item._id, "rejected")
-                        }
-                        disabled={processingId === item._id}
-                        className="rounded-lg bg-red-600 px-5 py-2 font-medium text-white hover:bg-red-700 disabled:opacity-50"
-                      >
-                        {processingId === item._id
-                          ? "Processing..."
-                          : "Reject"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </main>
-  );
+  const save = async () => { if (!editing) return; try { setBusy(editing._id); const response = await fetch(`${API}/api/admin/equipment/${editing._id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Equipment update failed."); setEditing(null); await load(); } catch (e) { setError(e instanceof Error ? e.message : "Equipment update failed."); } finally { setBusy(""); } };
+  const remove = async (item: Equipment) => { if (!window.confirm(`Delete ${item.name}? This cannot be undone.`)) return; try { setBusy(item._id); const response = await fetch(`${API}/api/admin/equipment/${item._id}`, { method: "DELETE", credentials: "include" }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Delete failed."); await load(); } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); } finally { setBusy(""); } };
+  return <div><div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-medium text-gray-500">ADMIN DASHBOARD</p><h1 className="mt-1 text-3xl font-bold">All Equipment</h1><p className="mt-2 text-gray-600">Review submissions and manage equipment listings.</p></div><button onClick={() => void load()} className="rounded-lg border px-4 py-2">Refresh</button></div>
+    <div className="mb-4 flex items-center gap-3"><span className="rounded-full bg-amber-100 px-3 py-1 text-sm text-amber-900">{equipment.filter((item) => item.status === "pending").length} pending</span><select aria-label="Filter equipment by status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border bg-white p-2"><option value="all">All statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div>
+    {error && <div role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error} <button onClick={() => void load()} className="ml-2 underline">Retry</button></div>}
+    <div className="overflow-x-auto rounded-xl border bg-white"><table className="w-full min-w-[1060px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr>{["Equipment", "Owner", "Category", "Rental Price", "Quantity", "Status", "Actions"].map((x) => <th key={x} className="px-4 py-3">{x}</th>)}</tr></thead><tbody className="divide-y">{filtered.map((item) => <tr key={item._id}><td className="px-4 py-4"><p className="font-medium">{item.name}</p><p className="text-gray-500">{item.location}</p></td><td className="px-4 py-4">{item.ownerName}<p className="text-gray-500">{item.ownerEmail}</p></td><td className="px-4 py-4">{item.category}</td><td className="px-4 py-4">৳{item.price.toLocaleString()} / {item.rentalType}</td><td className="px-4 py-4">{item.availableQuantity}</td><td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-xs ${item.status === "approved" ? "bg-green-100 text-green-800" : item.status === "rejected" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-900"}`}>{item.status || "pending"}</span></td><td className="px-4 py-4"><div className="flex flex-wrap gap-2">{item.status === "pending" && <><button disabled={busy === item._id} onClick={() => void updateStatus(item, "approved")} className="rounded bg-green-700 px-2.5 py-1.5 text-white disabled:opacity-50">Approve</button><button disabled={busy === item._id} onClick={() => void updateStatus(item, "rejected")} className="rounded bg-red-700 px-2.5 py-1.5 text-white disabled:opacity-50">Reject</button></>}<button onClick={() => { setEditing(item); setForm({ name: item.name, price: item.price, availableQuantity: item.availableQuantity, location: item.location }); }} className="rounded border px-2.5 py-1.5">Update</button><button disabled={busy === item._id} onClick={() => void remove(item)} className="rounded border border-red-200 px-2.5 py-1.5 text-red-700">Delete</button></div></td></tr>)}</tbody></table>{loading ? <p className="p-10 text-center text-gray-500">Loading equipment…</p> : !filtered.length && <p className="p-10 text-center text-gray-500">No equipment matches this status.</p>}</div>
+    {editing && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><section role="dialog" aria-modal="true" className="w-full max-w-lg rounded-2xl bg-white p-6"><h2 className="text-xl font-semibold">Update equipment</h2><div className="mt-4 space-y-3"><label className="block text-sm">Name<input className="mt-1 w-full rounded-lg border p-3" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}/></label><label className="block text-sm">Location<input className="mt-1 w-full rounded-lg border p-3" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}/></label><label className="block text-sm">Price<input type="number" min="1" className="mt-1 w-full rounded-lg border p-3" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}/></label><label className="block text-sm">Available quantity<input type="number" min="0" className="mt-1 w-full rounded-lg border p-3" value={form.availableQuantity} onChange={(e) => setForm({ ...form, availableQuantity: Number(e.target.value) })}/></label></div><div className="mt-5 flex justify-end gap-3"><button onClick={() => setEditing(null)} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={Boolean(busy)} onClick={() => void save()} className="rounded-lg bg-black px-4 py-2 text-white disabled:opacity-50">{busy ? "Saving…" : "Save changes"}</button></div></section></div>}
+  </div>;
 }
