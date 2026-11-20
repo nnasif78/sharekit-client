@@ -2,16 +2,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
 export default function AddEquipmentPage() {
-  const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageError, setImageError] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -39,6 +39,37 @@ export default function AddEquipmentPage() {
       ...previous,
       [name]: value,
     }));
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setImageError("");
+    const apiKey = process.env.NEXT_PUBLIC_IMGBB_API_KEY;
+    if (!apiKey) {
+      setImageError("Image upload is not configured. Add NEXT_PUBLIC_IMGBB_API_KEY to the client environment.");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setImageError("Choose an image file.");
+      return;
+    }
+    try {
+      setUploadingImage(true);
+      const body = new FormData();
+      body.append("image", file);
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: "POST", body });
+      const result = await response.json();
+      if (!response.ok || !result.success || !result.data?.url) {
+        throw new Error(result.error?.message || "Image upload failed.");
+      }
+      setFormData((previous) => ({ ...previous, image: result.data.url }));
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : "Image upload failed.");
+    } finally {
+      setUploadingImage(false);
+      event.target.value = "";
+    }
   };
 
   const handleSubmit = async (
@@ -82,9 +113,6 @@ export default function AddEquipmentPage() {
             ...formData,
             price,
             availableQuantity,
-            ownerId: session.user.id,
-            ownerName: session.user.name,
-            ownerEmail: session.user.email,
           }),
         }
       );
@@ -146,6 +174,11 @@ export default function AddEquipmentPage() {
       <p className="mb-8 text-gray-500">
         Submit your equipment for customers to rent.
       </p>
+
+      <div className="mb-6 rounded-xl border bg-gray-50 p-4 text-sm">
+        <p><strong>Owner:</strong> {session.user.name} · {session.user.email}</p>
+        <p className="mt-1 text-gray-600"><strong>Listing status:</strong> Pending admin approval</p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
 
@@ -316,8 +349,13 @@ export default function AddEquipmentPage() {
 
         <div>
           <label className="mb-2 block font-medium">
-            Equipment Image URL
+            Equipment Image
           </label>
+          <input type="file" accept="image/*" onChange={handleImageUpload} className={inputClass} disabled={uploadingImage} />
+          {uploadingImage && <p className="mt-2 text-sm text-gray-500">Uploading image…</p>}
+          {imageError && <p className="mt-2 text-sm text-red-600">{imageError}</p>}
+          {formData.image && <img src={formData.image} alt="Equipment preview" className="mt-3 h-40 w-full rounded-lg object-cover" />}
+          <p className="my-2 text-sm text-gray-500">Or paste an image URL</p>
           <input
             type="url"
             name="image"
@@ -357,7 +395,7 @@ export default function AddEquipmentPage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || uploadingImage}
           className="w-full rounded-lg bg-black p-3 font-semibold text-white disabled:opacity-50"
         >
           {loading ? "Submitting..." : "Submit Equipment"}

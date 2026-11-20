@@ -30,6 +30,9 @@ export default function Navbar() {
         ) : session ? (
           <>
             <span>{session.user.name}</span>
+            {(((session.user as { role?: string }).role === "owner") || ((session.user as { role?: string }).role === "admin")) && (
+              <Link href="/dashboard/owner">Owner Dashboard</Link>
+            )}
 
             <button
               onClick={handleLogout}
