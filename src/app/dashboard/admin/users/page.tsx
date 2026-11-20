@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-request";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -12,15 +13,15 @@ export default function AdminUsersPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const load = useCallback(async () => {
-    try { setError(""); const response = await fetch(`${API}/api/admin/users`, { credentials: "include", cache: "no-store" }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Could not load users."); setUsers(result.data || []); }
+    try { setError(""); const response = await apiFetch(`${API}/api/admin/users`, { credentials: "include", cache: "no-store" }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Could not load users."); setUsers(result.data || []); }
     catch (err) { setError(err instanceof Error ? err.message : "Could not load users."); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => { let active = true; fetch(`${API}/api/admin/users`, { credentials: "include", cache: "no-store" }).then(async (r) => { const data = await r.json(); if (!r.ok || !data.success) throw new Error(data.message || "Could not load users."); return data.data || []; }).then((data) => { if (active) setUsers(data); }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : "Could not load users."); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
+  useEffect(() => { let active = true; apiFetch(`${API}/api/admin/users`, { credentials: "include", cache: "no-store" }).then(async (r) => { const data = await r.json(); if (!r.ok || !data.success) throw new Error(data.message || "Could not load users."); return data.data || []; }).then((data) => { if (active) setUsers(data); }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : "Could not load users."); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
   const filtered = useMemo(() => users.filter((user) => `${user.name} ${user.email}`.toLowerCase().includes(search.toLowerCase())), [users, search]);
   const updateUser = async (user: AdminUser, payload: { role?: string; disabled?: boolean }) => {
     const action = payload.role ? "role" : "access";
-    try { setBusy(user._id); setError(""); const response = await fetch(`${API}/api/admin/users/${user._id}/${action}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Could not update user."); await load(); }
+    try { setBusy(user._id); setError(""); const response = await apiFetch(`${API}/api/admin/users/${user._id}/${action}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Could not update user."); await load(); }
     catch (err) { setError(err instanceof Error ? err.message : "Could not update user."); }
     finally { setBusy(""); }
   };

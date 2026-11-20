@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GoogleSignIn from "@/components/google-sign-in";
+import { clearAccessToken } from "@/lib/api-request";
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -46,6 +47,7 @@ export default function RegisterPage() {
                 return;
             }
 
+            clearAccessToken();
             router.push("/");
             router.refresh();
         } catch {

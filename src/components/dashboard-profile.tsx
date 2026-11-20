@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-request";
 
 import { FormEvent, useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
@@ -13,11 +14,11 @@ export default function DashboardProfile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  useEffect(() => { let active = true; fetch(`${API}/api/profile`, { credentials: "include", cache: "no-store" }).then(async (r) => { const result = await r.json(); if (!r.ok || !result.success) throw new Error(result.message || "Could not load profile."); return result.data; }).then((data) => { if (active) setProfile(data); }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : "Could not load profile."); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
+  useEffect(() => { let active = true; apiFetch(`${API}/api/profile`, { credentials: "include", cache: "no-store" }).then(async (r) => { const result = await r.json(); if (!r.ok || !result.success) throw new Error(result.message || "Could not load profile."); return result.data; }).then((data) => { if (active) setProfile(data); }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : "Could not load profile."); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
   const change = (field: keyof Pick<Profile, "name" | "image" | "phoneNumber" | "address">, value: string) => setProfile((p) => ({ ...p, [field]: value }));
   const save = async (event: FormEvent) => {
     event.preventDefault(); setError(""); setMessage("");
-    try { setSaving(true); const response = await fetch(`${API}/api/profile`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: profile.name, image: profile.image, phoneNumber: profile.phoneNumber, address: profile.address }) }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Could not save profile."); setMessage("Profile updated."); }
+    try { setSaving(true); const response = await apiFetch(`${API}/api/profile`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: profile.name, image: profile.image, phoneNumber: profile.phoneNumber, address: profile.address }) }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "Could not save profile."); setMessage("Profile updated."); }
     catch (e) { setError(e instanceof Error ? e.message : "Could not save profile."); }
     finally { setSaving(false); }
   };

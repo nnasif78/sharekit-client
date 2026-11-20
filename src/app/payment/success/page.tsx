@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-request";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -15,7 +16,7 @@ export default function PaymentSuccessPage() {
     let attempts = 0;
     const check = async () => {
       try {
-        const response = await fetch(`${API}/api/customer/checkout/${encodeURIComponent(sessionId)}`, { credentials: "include", cache: "no-store" });
+        const response = await apiFetch(`${API}/api/customer/checkout/${encodeURIComponent(sessionId)}`, { credentials: "include", cache: "no-store" });
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.message || "Could not verify payment.");
         if (!active) return;

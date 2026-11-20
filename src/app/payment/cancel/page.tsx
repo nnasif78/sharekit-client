@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-request";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -9,7 +10,7 @@ export default function PaymentCancelPage() {
   useEffect(() => {
     const reservationId = new URLSearchParams(window.location.search).get("reservation_id");
     if (!reservationId) { Promise.resolve().then(() => setMessage("No payment was completed. You can return to equipment details and try again.")); return; }
-    fetch(`${API}/api/customer/checkout/${encodeURIComponent(reservationId)}/cancel`, { method: "POST", credentials: "include" })
+    apiFetch(`${API}/api/customer/checkout/${encodeURIComponent(reservationId)}/cancel`, { method: "POST", credentials: "include" })
       .then(async (response) => { const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || "We could not confirm the cancellation."); setMessage("Checkout was cancelled. No payment was recorded, and the reserved quantity has been released."); })
       .catch((error: unknown) => setMessage(error instanceof Error ? error.message : "Checkout was cancelled. The reservation will expire automatically."));
   }, []);
