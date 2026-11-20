@@ -6,9 +6,9 @@
 </p>
 
 <p align="center">
-  <a href="https://sharekit-client.vercel.app/">Explore ShareKit</a> ·
-  <a href="https://sharekit-server.vercel.app/api/health">API status</a> ·
-  <a href="https://github.com/nnasif78/sharekit-server">Server repository</a>
+  <a href="https://sharekit-client.vercel.app/"><img alt="Explore ShareKit" src="https://img.shields.io/badge/Explore%20ShareKit-6C5CE7?style=for-the-badge&logo=vercel&logoColor=white" /></a>
+  <a href="https://sharekit-server.vercel.app/api/health"><img alt="API status" src="https://img.shields.io/badge/API%20Status-00A884?style=for-the-badge&logo=fastapi&logoColor=white" /></a>
+  <a href="https://github.com/nnasif78/sharekit-server"><img alt="Server repository" src="https://img.shields.io/badge/Server%20Repository-24292F?style=for-the-badge&logo=github&logoColor=white" /></a>
 </p>
 
 <p align="center">
